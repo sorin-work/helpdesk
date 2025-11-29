@@ -1,0 +1,16 @@
+{
+  "name": "helpdesk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Help desk for small support teams: customer portal, agent queues, SLAs and reports.",
+  "license": "MIT",
+  "workspaces": [],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {},
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
