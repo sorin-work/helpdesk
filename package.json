@@ -5,11 +5,15 @@
   "type": "module",
   "description": "Help desk for small support teams: customer portal, agent queues, SLAs and reports.",
   "license": "MIT",
-  "workspaces": [],
+  "workspaces": [
+    "api"
+  ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
