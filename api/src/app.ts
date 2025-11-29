@@ -1,9 +1,12 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Config } from './config.js';
+import type { Db } from './db/client.js';
 import { healthRoutes } from './modules/health/routes.js';
+import './types.js';
 
 export interface AppOptions {
   config: Config;
+  db: Db;
   logger?: FastifyServerOptions['logger'];
 }
 
@@ -19,6 +22,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
 
   app.decorate('config', options.config);
+  app.decorate('db', options.db);
 
   await app.register(
     async (api) => {
