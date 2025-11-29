@@ -9,8 +9,17 @@
   "engines": {
     "node": ">=22"
   },
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0"
   }
 }
