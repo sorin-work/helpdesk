@@ -42,4 +42,13 @@ export function registerErrorHandler(app: FastifyInstance): void {
     request.log.error({ err: error }, 'unhandled error');
     return send(500, { code: 'internal_error', message: 'Something went wrong on our side' });
   });
+
+  app.setNotFoundHandler((request, reply) => {
+    reply.status(404).send({
+      error: {
+        code: 'not_found',
+        message: `Route ${request.method} ${request.url} not found`,
+      },
+    });
+  });
 }
