@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { unauthorized } from '../../lib/errors.js';
 import { parse } from '../../lib/validation.js';
-import { startSession } from '../../plugins/auth.js';
+import { currentUser, endSession, startSession } from '../../plugins/auth.js';
 import { toUserDto } from '../users/dto.js';
 import { createUser, findUserByEmail, verifyPassword } from '../users/service.js';
 
@@ -35,5 +35,14 @@ export async function authRoutes(app: FastifyInstance) {
     }
     await startSession(app, reply, user);
     return toUserDto(user);
+  });
+
+  app.post('/auth/logout', async (_request, reply) => {
+    endSession(reply);
+    return reply.status(204).send();
+  });
+
+  app.get('/auth/me', { preHandler: app.authenticate }, async (request) => {
+    return toUserDto(currentUser(request));
   });
 }
