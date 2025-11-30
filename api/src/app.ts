@@ -1,7 +1,9 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
+import { authRoutes } from './modules/auth/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { registerAuth } from './plugins/auth.js';
 import { registerErrorHandler } from './plugins/errors.js';
 import './types.js';
 
@@ -26,10 +28,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.decorate('db', options.db);
 
   registerErrorHandler(app);
+  await registerAuth(app);
 
   await app.register(
     async (api) => {
       await api.register(healthRoutes);
+      await api.register(authRoutes);
     },
     { prefix: '/api' },
   );
