@@ -16,6 +16,12 @@ export interface AppOptions {
 export function loggerOptions(config: Config): FastifyServerOptions['logger'] {
   return {
     level: config.logLevel,
+    ...(config.env === 'development' && {
+      transport: {
+        target: 'pino-pretty',
+        options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
+      },
+    }),
   };
 }
 
