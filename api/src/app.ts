@@ -17,6 +17,7 @@ export interface AppOptions {
 export function loggerOptions(config: Config): FastifyServerOptions['logger'] {
   return {
     level: config.logLevel,
+    redact: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]'],
     ...(config.env === 'development' && {
       transport: {
         target: 'pino-pretty',
