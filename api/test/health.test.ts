@@ -15,6 +15,14 @@ describe('GET /api/health', () => {
     expect(res.json()).toEqual({ status: 'ok', database: 'ok' });
   });
 
+  it('echoes a request id', async () => {
+    const res = await ctx.app.inject({
+      url: '/api/health',
+      headers: { 'x-request-id': 'abc-123' },
+    });
+    expect(res.headers['x-request-id']).toBe('abc-123');
+  });
+
   it('answers unknown routes with a JSON 404', async () => {
     const res = await ctx.app.inject({ url: '/api/nope' });
     expect(res.statusCode).toBe(404);

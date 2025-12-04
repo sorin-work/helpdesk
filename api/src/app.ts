@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
@@ -28,10 +29,15 @@ export function loggerOptions(config: Config): FastifyServerOptions['logger'] {
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: options.logger ?? false,
+    genReqId: (req) => (req.headers['x-request-id'] as string | undefined) ?? randomUUID(),
   });
 
   app.decorate('config', options.config);
   app.decorate('db', options.db);
+
+  app.addHook('onSend', async (request, reply) => {
+    reply.header('x-request-id', request.id);
+  });
 
   registerErrorHandler(app);
   await registerAuth(app);

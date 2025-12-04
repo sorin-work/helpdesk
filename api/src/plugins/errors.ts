@@ -10,7 +10,7 @@ interface ErrorBody {
 export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError | Error, request, reply) => {
     const send = (status: number, body: ErrorBody['error']) =>
-      reply.status(status).send({ error: body });
+      reply.status(status).send({ error: { ...body, requestId: request.id } });
 
     if (error instanceof ZodError) {
       return send(400, {
@@ -48,6 +48,7 @@ export function registerErrorHandler(app: FastifyInstance): void {
       error: {
         code: 'not_found',
         message: `Route ${request.method} ${request.url} not found`,
+        requestId: request.id,
       },
     });
   });
