@@ -3,6 +3,7 @@ import {
   addBusinessMinutes,
   businessMinutesBetween,
   DEFAULT_SCHEDULE,
+  zonedTimeToUtc,
   type BusinessSchedule,
 } from './business-hours.js';
 
@@ -168,5 +169,12 @@ describe('businessMinutesBetween', () => {
         );
       }
     }
+  });
+});
+
+describe('zonedTimeToUtc', () => {
+  it('converts local wall-clock time to UTC', () => {
+    const at = zonedTimeToUtc({ year: 2026, month: 7, day: 1 }, 9 * 60, 'Europe/Bucharest');
+    expect(new Date(at).toISOString()).toBe('2026-07-01T06:00:00.000Z');
   });
 });
