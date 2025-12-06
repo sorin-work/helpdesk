@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { addBusinessMinutes, DEFAULT_SCHEDULE, type BusinessSchedule } from './business-hours.js';
+import {
+  addBusinessMinutes,
+  businessMinutesBetween,
+  DEFAULT_SCHEDULE,
+  type BusinessSchedule,
+} from './business-hours.js';
 
 const utc = (iso: string) => new Date(iso);
 const iso = (date: Date) => date.toISOString();
@@ -75,5 +80,38 @@ describe('addBusinessMinutes', () => {
 
   it('rejects negative minutes', () => {
     expect(() => addBusinessMinutes(utc('2026-03-04T10:00:00Z'), -1, office)).toThrow(RangeError);
+  });
+});
+
+describe('businessMinutesBetween', () => {
+  it('counts plain minutes without a schedule', () => {
+    expect(
+      businessMinutesBetween(utc('2026-03-07T10:00:00Z'), utc('2026-03-07T12:30:00Z'), null),
+    ).toBe(150);
+  });
+
+  it('counts minutes inside one window', () => {
+    expect(
+      businessMinutesBetween(utc('2026-03-04T10:00:00Z'), utc('2026-03-04T12:15:00Z'), office),
+    ).toBe(135);
+  });
+
+  it('ignores nights and weekends', () => {
+    // Fri 16:00 -> Mon 10:00 = 1h on Friday + 1h on Monday
+    expect(
+      businessMinutesBetween(utc('2026-03-06T16:00:00Z'), utc('2026-03-09T10:00:00Z'), office),
+    ).toBe(120);
+  });
+
+  it('is zero entirely outside hours', () => {
+    expect(
+      businessMinutesBetween(utc('2026-03-07T08:00:00Z'), utc('2026-03-08T20:00:00Z'), office),
+    ).toBe(0);
+  });
+
+  it('is zero when the end is before the start', () => {
+    expect(
+      businessMinutesBetween(utc('2026-03-04T12:00:00Z'), utc('2026-03-04T10:00:00Z'), office),
+    ).toBe(0);
   });
 });
