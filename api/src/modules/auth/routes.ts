@@ -4,7 +4,13 @@ import { unauthorized } from '../../lib/errors.js';
 import { parse } from '../../lib/validation.js';
 import { currentUser, endSession, startSession } from '../../plugins/auth.js';
 import { toUserDto } from '../users/dto.js';
-import { createUser, findUserByEmail, verifyPassword } from '../users/service.js';
+import {
+  changePassword,
+  createUser,
+  findUserByEmail,
+  updateUser,
+  verifyPassword,
+} from '../users/service.js';
 
 const signupBody = z.object({
   email: z.email().max(254),
@@ -15,6 +21,17 @@ const signupBody = z.object({
 const loginBody = z.object({
   email: z.string().trim().min(1),
   password: z.string().min(1),
+});
+
+const profileBody = z
+  .object({
+    name: z.string().trim().min(1).max(100),
+  })
+  .partial();
+
+const passwordBody = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(200),
 });
 
 export async function authRoutes(app: FastifyInstance) {
@@ -44,5 +61,24 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.get('/auth/me', { preHandler: app.authenticate }, async (request) => {
     return toUserDto(currentUser(request));
+  });
+
+  app.patch('/auth/me', { preHandler: app.authenticate }, async (request) => {
+    const user = currentUser(request);
+    const body = parse(profileBody, request.body);
+    const updated = await updateUser(app.db, user, user.id, body);
+    return toUserDto(updated);
+  });
+
+  app.post('/auth/password', { preHandler: app.authenticate }, async (request, reply) => {
+    const body = parse(passwordBody, request.body);
+    await changePassword(
+      app.db,
+      currentUser(request),
+      body.currentPassword,
+      body.newPassword,
+      app.config.bcryptRounds,
+    );
+    return reply.status(204).send();
   });
 }

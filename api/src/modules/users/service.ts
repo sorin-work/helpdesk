@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { eq, sql } from 'drizzle-orm';
 import type { DbOrTx } from '../../db/client.js';
 import { users, type Role, type User } from '../../db/schema/index.js';
-import { conflict, notFound } from '../../lib/errors.js';
+import { badRequest, conflict, notFound } from '../../lib/errors.js';
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -52,4 +52,40 @@ export async function createUser(
 
 export async function verifyPassword(user: User, password: string): Promise<boolean> {
   return bcrypt.compare(password, user.passwordHash);
+}
+
+export async function changePassword(
+  db: DbOrTx,
+  user: User,
+  currentPassword: string,
+  newPassword: string,
+  bcryptRounds: number,
+): Promise<void> {
+  if (!(await verifyPassword(user, currentPassword))) {
+    throw badRequest('Current password is incorrect');
+  }
+  const passwordHash = await bcrypt.hash(newPassword, bcryptRounds);
+  await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, user.id));
+}
+
+export interface UpdateUserInput {
+  name?: string;
+}
+
+export async function updateUser(
+  db: DbOrTx,
+  actor: User,
+  id: number,
+  input: UpdateUserInput,
+): Promise<User> {
+  const target = await getUser(db, id);
+  const [updated] = await db
+    .update(users)
+    .set({
+      ...(input.name !== undefined && { name: input.name.trim() }),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, target.id))
+    .returning();
+  return updated!;
 }

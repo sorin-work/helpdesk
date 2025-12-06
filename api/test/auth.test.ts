@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTestContext, sessionCookie, type TestContext } from './app.js';
+import {
+  as,
+  createSignedInUser,
+  createTestContext,
+  sessionCookie,
+  type TestContext,
+} from './app.js';
 
 let ctx: TestContext;
 
@@ -94,5 +100,34 @@ describe('session', () => {
     expect(res.statusCode).toBe(204);
     const cookie = res.cookies.find((c) => c.name === 'helpdesk_session');
     expect(cookie?.value).toBe('');
+  });
+});
+
+describe('profile', () => {
+  it('updates the name', async () => {
+    const user = await createSignedInUser(ctx, 'customer');
+    const res = await as(ctx, user).patch('/api/auth/me', { name: 'New Name' });
+    expect(res.json().name).toBe('New Name');
+  });
+
+  it('changes the password after checking the current one', async () => {
+    const user = await createSignedInUser(ctx, 'customer');
+    const wrong = await as(ctx, user).post('/api/auth/password', {
+      currentPassword: 'wrong',
+      newPassword: 'another-password',
+    });
+    expect(wrong.statusCode).toBe(400);
+
+    const ok = await as(ctx, user).post('/api/auth/password', {
+      currentPassword: 'password123',
+      newPassword: 'another-password',
+    });
+    expect(ok.statusCode).toBe(204);
+    const login = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: user.email, password: 'another-password' },
+    });
+    expect(login.statusCode).toBe(200);
   });
 });
