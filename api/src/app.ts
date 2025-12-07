@@ -4,6 +4,7 @@ import type { Config } from './config.js';
 import type { Db } from './db/client.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { settingsRoutes } from './modules/settings/routes.js';
 import { registerAuth } from './plugins/auth.js';
 import { registerErrorHandler } from './plugins/errors.js';
 import './types.js';
@@ -47,6 +48,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     async (api) => {
       await api.register(healthRoutes);
       await api.register(authRoutes);
+      await api.register(settingsRoutes);
     },
     { prefix: '/api' },
   );
