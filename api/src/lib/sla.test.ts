@@ -32,6 +32,11 @@ describe('slaSummary', () => {
     expect(sla.resolution.state).toBe('on_track');
   });
 
+  it('warns in the last hour before a target', () => {
+    const sla = slaSummary(base, new Date('2026-03-04T10:30:00Z'));
+    expect(sla.firstResponse.state).toBe('due_soon');
+  });
+
   it('is breached once the target has passed', () => {
     const sla = slaSummary(base, new Date('2026-03-04T11:00:01Z'));
     expect(sla.firstResponse.state).toBe('breached');
@@ -43,5 +48,31 @@ describe('slaSummary', () => {
       new Date('2026-03-10T00:00:00Z'),
     );
     expect(sla.firstResponse.state).toBe('met');
+  });
+
+  it('stays breached after a late reply', () => {
+    const sla = slaSummary(
+      { ...base, firstRespondedAt: new Date('2026-03-04T11:30:00Z') },
+      new Date('2026-03-04T11:31:00Z'),
+    );
+    expect(sla.firstResponse.state).toBe('breached');
+  });
+
+  it('judges solved tickets by when they were solved', () => {
+    const sla = slaSummary(
+      {
+        ...base,
+        firstRespondedAt: new Date('2026-03-04T10:10:00Z'),
+        solvedAt: new Date('2026-03-04T16:00:00Z'),
+      },
+      new Date('2026-04-01T00:00:00Z'),
+    );
+    expect(sla.resolution.state).toBe('met');
+  });
+
+  it('reports none for tickets without targets', () => {
+    const sla = slaSummary({ ...base, firstResponseDueAt: null, resolutionDueAt: null });
+    expect(sla.firstResponse).toEqual({ state: 'none', dueAt: null });
+    expect(sla.resolution).toEqual({ state: 'none', dueAt: null });
   });
 });
