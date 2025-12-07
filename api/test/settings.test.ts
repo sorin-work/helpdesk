@@ -49,6 +49,15 @@ describe('business hours', () => {
     expect(paths).toEqual(expect.arrayContaining(['timezone', 'holidays.0']));
   });
 
+  it('needs at least one working day', async () => {
+    const days = Object.fromEntries(Object.keys(DEFAULT_SCHEDULE.days).map((d) => [d, null]));
+    const res = await as(ctx, admin).put('/api/settings/business-hours', {
+      ...schedule,
+      days,
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('can only be changed by admins', async () => {
     expect((await as(ctx, agent).put('/api/settings/business-hours', schedule)).statusCode).toBe(
       403,
@@ -73,5 +82,12 @@ describe('SLA policies', () => {
     });
     expect(res.json().high.firstResponseMinutes).toBe(30);
     expect(res.json().normal.firstResponseMinutes).toBe(480);
+  });
+
+  it('rejects nonsense targets', async () => {
+    const res = await as(ctx, admin).put('/api/settings/sla', {
+      low: { firstResponseMinutes: 0, resolutionMinutes: -5, businessHours: 'yes' },
+    });
+    expect(res.statusCode).toBe(400);
   });
 });
