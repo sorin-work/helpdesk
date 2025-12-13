@@ -5,6 +5,7 @@ import { parse } from '../../lib/validation.js';
 import { currentUser } from '../../plugins/auth.js';
 import { loadTicketFor } from './access.js';
 import { listEvents } from './events.js';
+import { addMessage } from './messages.js';
 import { createTicket, getTicketDetail, listTickets, updateTicket } from './service.js';
 
 const ticketId = z.coerce.number().int().positive();
@@ -29,6 +30,12 @@ const updateBody = z
     assigneeId: z.number().int().positive().nullable(),
   })
   .partial();
+
+const messageBody = z.object({
+  body,
+  internal: z.boolean().default(false),
+  status: z.enum(TICKET_STATUSES).optional(),
+});
 
 export async function ticketRoutes(app: FastifyInstance) {
   app.get('/tickets', { preHandler: app.authenticate }, async (request) => {
@@ -61,6 +68,18 @@ export async function ticketRoutes(app: FastifyInstance) {
       const input = parse(updateBody, request.body);
       await updateTicket(app.db, user, id, input, app.now());
       return getTicketDetail(app.db, user, id, app.now());
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/tickets/:id/messages',
+    { preHandler: app.authenticate },
+    async (request, reply) => {
+      const user = currentUser(request);
+      const id = parse(ticketId, request.params.id);
+      const input = parse(messageBody, request.body);
+      await addMessage(app.db, user, id, input, app.now());
+      return reply.status(201).send(await getTicketDetail(app.db, user, id, app.now()));
     },
   );
 
