@@ -7,15 +7,17 @@ import {
   users,
   type Ticket,
   type TicketPriority,
+  type TicketStatus,
   type User,
 } from '../../db/schema/index.js';
-import { notFound } from '../../lib/errors.js';
+import { badRequest, notFound } from '../../lib/errors.js';
+import { canTransition } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
 import { getPolicy, getSchedule } from '../sla/service.js';
 import { loadTicketFor } from './access.js';
 import { toMessageDto, toTicketSummary, type TicketDetailDto } from './dto.js';
 import { recordEvent } from './events.js';
-import { dueDateFields } from './sla-fields.js';
+import { dueDateFields, statusChangeFields } from './sla-fields.js';
 
 const requester = alias(users, 'requester');
 const assignee = alias(users, 'assignee');
@@ -134,4 +136,99 @@ export async function createTicket(
     await recordEvent(tx, ticket!.id, actor.id, 'created', { priority: input.priority }, now);
     return ticket!;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Updating
+
+export interface UpdateTicketInput {
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigneeId?: number | null;
+}
+
+export async function assertAssignable(db: DbOrTx, id: number): Promise<User> {
+  const [agent] = await db.select().from(users).where(eq(users.id, id));
+  if (!agent || !agent.active || !isStaff(agent)) {
+    throw badRequest('Tickets can only be assigned to active agents');
+  }
+  return agent;
+}
+
+export async function updateTicket(
+  db: Db,
+  actor: User,
+  id: number,
+  input: UpdateTicketInput,
+  now: Date,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [ticket] = await tx.select().from(tickets).where(eq(tickets.id, id)).for('update');
+    if (!ticket) throw notFound('Ticket');
+
+    const patch: Partial<Ticket> = {};
+    const schedule = await getSchedule(tx);
+    let target = await getPolicy(tx, ticket.priority);
+
+    if (input.priority && input.priority !== ticket.priority) {
+      target = await getPolicy(tx, input.priority);
+      patch.priority = input.priority;
+      Object.assign(patch, dueDateFields(ticket, target, schedule));
+      await recordEvent(
+        tx,
+        id,
+        actor.id,
+        'priority_changed',
+        { from: ticket.priority, to: input.priority },
+        now,
+      );
+    }
+
+    if (input.status && input.status !== ticket.status) {
+      if (!canTransition(ticket.status, input.status)) {
+        throw badRequest(`A ${ticket.status} ticket cannot be moved to ${input.status}`);
+      }
+      Object.assign(patch, statusChangeFields(ticket, input.status, now));
+      await recordEvent(
+        tx,
+        id,
+        actor.id,
+        'status_changed',
+        { from: ticket.status, to: input.status },
+        now,
+      );
+    }
+
+    if (input.assigneeId !== undefined && input.assigneeId !== ticket.assigneeId) {
+      const previous = ticket.assigneeId ? await findPerson(tx, ticket.assigneeId) : null;
+      const next = input.assigneeId === null ? null : await assertAssignable(tx, input.assigneeId);
+      patch.assigneeId = next?.id ?? null;
+      await recordEvent(
+        tx,
+        id,
+        actor.id,
+        'assigned',
+        {
+          from: previous ? { id: previous.id, name: previous.name } : null,
+          to: next ? { id: next.id, name: next.name } : null,
+        },
+        now,
+      );
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await tx
+        .update(tickets)
+        .set({ ...patch, updatedAt: now })
+        .where(eq(tickets.id, id));
+    }
+  });
+}
+
+async function findPerson(db: DbOrTx, id: number) {
+  const [user] = await db
+    .select({ id: users.id, name: users.name })
+    .from(users)
+    .where(eq(users.id, id));
+  return user ?? null;
 }
