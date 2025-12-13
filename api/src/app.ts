@@ -6,6 +6,7 @@ import { authRoutes } from './modules/auth/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { settingsRoutes } from './modules/settings/routes.js';
 import { ticketRoutes } from './modules/tickets/routes.js';
+import { userRoutes } from './modules/users/routes.js';
 import { registerAuth } from './plugins/auth.js';
 import { registerErrorHandler } from './plugins/errors.js';
 import './types.js';
@@ -51,6 +52,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     async (api) => {
       await api.register(healthRoutes);
       await api.register(authRoutes);
+      await api.register(userRoutes);
       await api.register(ticketRoutes);
       await api.register(settingsRoutes);
     },

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { DbOrTx } from '../../db/client.js';
 import { users, type Role, type User } from '../../db/schema/index.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
@@ -66,6 +66,15 @@ export async function changePassword(
   }
   const passwordHash = await bcrypt.hash(newPassword, bcryptRounds);
   await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, user.id));
+}
+
+/** Active agents and admins: everyone who can be assigned a ticket. */
+export async function listStaff(db: DbOrTx): Promise<User[]> {
+  return db
+    .select()
+    .from(users)
+    .where(and(inArray(users.role, ['agent', 'admin']), eq(users.active, true)))
+    .orderBy(asc(users.name));
 }
 
 export interface UpdateUserInput {
