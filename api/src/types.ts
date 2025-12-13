@@ -9,6 +9,8 @@ declare module 'fastify' {
   interface FastifyInstance {
     config: Config;
     db: Db;
+    /** Current time; tests swap this out to move the clock. */
+    now(): Date;
     authenticate: AuthHook;
     requireRole(...roles: Role[]): AuthHook;
   }

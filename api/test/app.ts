@@ -10,9 +10,13 @@ export interface TestContext {
   app: FastifyInstance;
   db: Db;
   config: Config;
+  /** Moves the app's clock; defaults to a Wednesday morning. */
+  setNow(date: Date | string): void;
   reset(): Promise<void>;
   close(): Promise<void>;
 }
+
+export const DEFAULT_NOW = new Date('2026-03-04T10:00:00Z');
 
 export async function createTestContext(overrides: Partial<Config> = {}): Promise<TestContext> {
   const database = await createTestDatabase();
@@ -26,14 +30,19 @@ export async function createTestContext(overrides: Partial<Config> = {}): Promis
     }),
     ...overrides,
   };
-  const app = await buildApp({ config, db: database.db });
+  let now = DEFAULT_NOW;
+  const app = await buildApp({ config, db: database.db, now: () => now });
   await app.ready();
 
   return {
     app,
     db: database.db,
     config,
+    setNow(date) {
+      now = new Date(date);
+    },
     async reset() {
+      now = DEFAULT_NOW;
       await resetDatabase(database.db);
     },
     async close() {
