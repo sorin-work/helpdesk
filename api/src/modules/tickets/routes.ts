@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '../../db/schema/index.js';
 import { parse } from '../../lib/validation.js';
 import { currentUser } from '../../plugins/auth.js';
+import { loadTicketFor } from './access.js';
+import { listEvents } from './events.js';
 import { createTicket, getTicketDetail, listTickets, updateTicket } from './service.js';
 
 const ticketId = z.coerce.number().int().positive();
@@ -59,6 +61,16 @@ export async function ticketRoutes(app: FastifyInstance) {
       const input = parse(updateBody, request.body);
       await updateTicket(app.db, user, id, input, app.now());
       return getTicketDetail(app.db, user, id, app.now());
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    '/tickets/:id/events',
+    { preHandler: app.requireRole('agent', 'admin') },
+    async (request) => {
+      const id = parse(ticketId, request.params.id);
+      await loadTicketFor(app.db, currentUser(request), id);
+      return { items: await listEvents(app.db, id) };
     },
   );
 }
