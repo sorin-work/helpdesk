@@ -70,6 +70,19 @@ export async function addMessage(
       patch.firstRespondedAt = now;
     }
 
+    // Replying publicly to an unassigned ticket takes it.
+    if (staff && !input.internal && ticket.assigneeId === null) {
+      patch.assigneeId = author.id;
+      await recordEvent(
+        tx,
+        ticketId,
+        author.id,
+        'assigned',
+        { from: null, to: { id: author.id, name: author.name } },
+        now,
+      );
+    }
+
     const status = nextStatus(ticket, author, input);
     if (status !== ticket.status) {
       if (!canTransition(ticket.status, status)) {

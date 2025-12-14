@@ -38,6 +38,12 @@ describe('public replies', () => {
     expect(body.messages).toHaveLength(2);
   });
 
+  it('assigns unassigned tickets to the agent who replies', async () => {
+    const ticket = await openTicket(ctx, customer);
+    const res = await reply(agent, ticket.id, { body: 'On it.' });
+    expect(res.json().assignee).toEqual({ id: agent.id, name: 'Alex Rivera' });
+  });
+
   it('marks the first response as breached when it comes late', async () => {
     const ticket = await openTicket(ctx, customer, { priority: 'high' });
     ctx.setNow('2026-03-04T15:00:00Z');
