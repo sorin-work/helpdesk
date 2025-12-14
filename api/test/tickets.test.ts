@@ -50,6 +50,11 @@ describe('creating tickets', () => {
       resolution: { state: 'on_track', dueAt: '2026-03-06T10:00:00.000Z' },
     });
   });
+
+  it('does not let customers pick urgent', async () => {
+    const ticket = await openTicket(ctx, customer, { priority: 'urgent' });
+    expect(ticket.priority).toBe('high');
+  });
 });
 
 describe('updating tickets', () => {

@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '../../db/schema/index.js';
 import { parse } from '../../lib/validation.js';
-import { currentUser } from '../../plugins/auth.js';
+import { currentUser, isStaff } from '../../plugins/auth.js';
 import { loadTicketFor } from './access.js';
 import { listEvents } from './events.js';
 import { addMessage } from './messages.js';
@@ -46,6 +46,8 @@ export async function ticketRoutes(app: FastifyInstance) {
   app.post('/tickets', { preHandler: app.authenticate }, async (request, reply) => {
     const user = currentUser(request);
     const input = parse(createBody, request.body);
+    // Urgent is a judgement call for the team, not something customers pick.
+    if (!isStaff(user) && input.priority === 'urgent') input.priority = 'high';
     const ticket = await createTicket(app.db, user, input, app.now());
     return reply.status(201).send(await getTicketDetail(app.db, user, ticket.id, app.now()));
   });
