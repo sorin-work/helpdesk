@@ -66,7 +66,7 @@ export async function addMessage(
     const patch: Partial<Ticket> = { updatedAt: now };
     if (!input.internal) patch.lastMessageAt = now;
 
-    if (staff && !ticket.firstRespondedAt) {
+    if (staff && !input.internal && !ticket.firstRespondedAt) {
       patch.firstRespondedAt = now;
     }
 
