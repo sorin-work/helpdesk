@@ -77,3 +77,32 @@ describe('public replies', () => {
     expect(res.json().status).toBe('new');
   });
 });
+
+describe('internal notes', () => {
+  it('are hidden from the customer', async () => {
+    const ticket = await openTicket(ctx, customer);
+    await reply(agent, ticket.id, { body: 'Customer is on the legacy plan.', internal: true });
+    await reply(agent, ticket.id, { body: 'Hi Casey, checking now.' });
+
+    const agentView = (await as(ctx, agent).get(`/api/tickets/${ticket.id}`)).json();
+    expect(agentView.messages.map((m: { internal: boolean }) => m.internal)).toEqual([
+      false,
+      true,
+      false,
+    ]);
+
+    const customerView = (await as(ctx, customer).get(`/api/tickets/${ticket.id}`)).json();
+    expect(customerView.messages.map((m: { body: string }) => m.body)).toEqual([
+      'It started smoking after the last update.',
+      'Hi Casey, checking now.',
+    ]);
+  });
+
+  it('do not count as a first response or change the status', async () => {
+    const ticket = await openTicket(ctx, customer);
+    const res = await reply(agent, ticket.id, { body: 'Escalating to billing.', internal: true });
+    expect(res.json().status).toBe('new');
+    expect(res.json().assignee).toBeNull();
+    expect(res.json().sla.firstResponse.state).toBe('on_track');
+  });
+});
