@@ -55,6 +55,20 @@ describe('creating tickets', () => {
     const ticket = await openTicket(ctx, customer, { priority: 'urgent' });
     expect(ticket.priority).toBe('high');
   });
+
+  it('validates subject and body', async () => {
+    const res = await as(ctx, customer).post('/api/tickets', { subject: 'x', body: '   ' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.details.map((d: { path: string }) => d.path)).toEqual([
+      'subject',
+      'body',
+    ]);
+  });
+
+  it('requires a session', async () => {
+    const res = await as(ctx, null).post('/api/tickets', { subject: 'Hello', body: 'World' });
+    expect(res.statusCode).toBe(401);
+  });
 });
 
 describe('updating tickets', () => {
@@ -105,5 +119,19 @@ describe('updating tickets', () => {
       assigneeId: customer.id,
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('unassigns with null', async () => {
+    const ticket = await openTicket(ctx, customer);
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { assigneeId: agent.id });
+    const res = await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { assigneeId: null });
+    expect(res.json().assignee).toBeNull();
+  });
+
+  it('returns 404 for unknown tickets', async () => {
+    expect((await as(ctx, agent).patch('/api/tickets/9999', { status: 'open' })).statusCode).toBe(
+      404,
+    );
+    expect((await as(ctx, agent).get('/api/tickets/abc')).statusCode).toBe(400);
   });
 });
