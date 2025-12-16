@@ -10,6 +10,7 @@ import { openTicket } from './fixtures.js';
 
 let ctx: TestContext;
 let customer: TestUser;
+let otherCustomer: TestUser;
 let agent: TestUser;
 
 beforeAll(async () => {
@@ -19,6 +20,7 @@ afterAll(() => ctx.close());
 beforeEach(async () => {
   await ctx.reset();
   customer = await createSignedInUser(ctx, 'customer', 'Casey Morgan');
+  otherCustomer = await createSignedInUser(ctx, 'customer', 'Jordan Lee');
   agent = await createSignedInUser(ctx, 'agent', 'Alex Rivera');
 });
 
@@ -68,6 +70,34 @@ describe('creating tickets', () => {
   it('requires a session', async () => {
     const res = await as(ctx, null).post('/api/tickets', { subject: 'Hello', body: 'World' });
     expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('access', () => {
+  it('only shows customers their own tickets', async () => {
+    const mine = await openTicket(ctx, customer);
+    await openTicket(ctx, otherCustomer, { subject: 'Someone else' });
+
+    const list = (await as(ctx, customer).get('/api/tickets')).json();
+    expect(list.total).toBe(1);
+    expect(list.items.map((t: { id: number }) => t.id)).toEqual([mine.id]);
+  });
+
+  it('hides other customers tickets behind a 404', async () => {
+    const theirs = await openTicket(ctx, otherCustomer);
+    const res = await as(ctx, customer).get(`/api/tickets/${theirs.id}`);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('lets agents see every ticket', async () => {
+    await openTicket(ctx, customer);
+    await openTicket(ctx, otherCustomer);
+    expect((await as(ctx, agent).get('/api/tickets')).json().total).toBe(2);
+  });
+
+  it('keeps the ticket timeline away from customers', async () => {
+    const ticket = await openTicket(ctx, customer);
+    expect((await as(ctx, customer).get(`/api/tickets/${ticket.id}/events`)).statusCode).toBe(403);
   });
 });
 
