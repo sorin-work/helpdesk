@@ -6,11 +6,19 @@ import { currentUser, isStaff } from '../../plugins/auth.js';
 import { loadTicketFor } from './access.js';
 import { listEvents } from './events.js';
 import { addMessage } from './messages.js';
-import { createTicket, getTicketDetail, listTickets, updateTicket } from './service.js';
+import {
+  createTicket,
+  getTicketDetail,
+  listTickets,
+  updateTicket,
+  viewCounts,
+  VIEWS,
+} from './service.js';
 
 const ticketId = z.coerce.number().int().positive();
 
 const listQuery = z.object({
+  view: z.enum(VIEWS).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
@@ -41,6 +49,10 @@ export async function ticketRoutes(app: FastifyInstance) {
   app.get('/tickets', { preHandler: app.authenticate }, async (request) => {
     const query = parse(listQuery, request.query);
     return listTickets(app.db, currentUser(request), query, app.now());
+  });
+
+  app.get('/tickets/counts', { preHandler: app.requireRole('agent', 'admin') }, async (request) => {
+    return viewCounts(app.db, currentUser(request));
   });
 
   app.post('/tickets', { preHandler: app.authenticate }, async (request, reply) => {

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db, DbOrTx } from '../../db/client.js';
 import {
@@ -11,7 +11,7 @@ import {
   type User,
 } from '../../db/schema/index.js';
 import { badRequest, notFound } from '../../lib/errors.js';
-import { canTransition } from '../../lib/status.js';
+import { canTransition, UNSOLVED_STATUSES } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
 import { getPolicy, getSchedule } from '../sla/service.js';
 import { loadTicketFor } from './access.js';
@@ -39,15 +39,38 @@ function ticketRows(db: DbOrTx) {
 // ---------------------------------------------------------------------------
 // Views and listing
 
+export const VIEWS = ['unassigned', 'mine', 'open', 'overdue', 'solved', 'all'] as const;
+export type TicketView = (typeof VIEWS)[number];
+
 export interface ListTicketsInput {
+  view?: TicketView;
   page: number;
   pageSize: number;
+}
+
+const unsolved = () => inArray(tickets.status, [...UNSOLVED_STATUSES]);
+
+function viewCondition(view: TicketView, viewer: User): SQL | undefined {
+  switch (view) {
+    case 'unassigned':
+      return and(unsolved(), isNull(tickets.assigneeId));
+    case 'mine':
+      return and(unsolved(), eq(tickets.assigneeId, viewer.id));
+    case 'open':
+      return unsolved();
+    case 'solved':
+      return inArray(tickets.status, ['solved', 'closed']);
+    case 'all':
+      return undefined;
+  }
 }
 
 export async function listTickets(db: Db, viewer: User, input: ListTicketsInput, now: Date) {
   const conditions: (SQL | undefined)[] = [];
   if (!isStaff(viewer)) {
     conditions.push(eq(tickets.requesterId, viewer.id));
+  } else if (input.view) {
+    conditions.push(viewCondition(input.view, viewer));
   }
 
   const where = and(...conditions);
@@ -66,6 +89,20 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
     page: input.page,
     pageSize: input.pageSize,
   };
+}
+
+/** Ticket counts for the agent sidebar. */
+export async function viewCounts(db: Db, viewer: User) {
+  const countWhere = async (where: SQL | undefined) => {
+    const [row] = await db.select({ value: count() }).from(tickets).where(where);
+    return row?.value ?? 0;
+  };
+  const [unassigned, mine, open] = await Promise.all([
+    countWhere(viewCondition('unassigned', viewer)),
+    countWhere(viewCondition('mine', viewer)),
+    countWhere(viewCondition('open', viewer)),
+  ]);
+  return { unassigned, mine, open };
 }
 
 // ---------------------------------------------------------------------------

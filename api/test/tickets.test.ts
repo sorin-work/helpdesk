@@ -12,6 +12,7 @@ let ctx: TestContext;
 let customer: TestUser;
 let otherCustomer: TestUser;
 let agent: TestUser;
+let admin: TestUser;
 
 beforeAll(async () => {
   ctx = await createTestContext();
@@ -22,6 +23,7 @@ beforeEach(async () => {
   customer = await createSignedInUser(ctx, 'customer', 'Casey Morgan');
   otherCustomer = await createSignedInUser(ctx, 'customer', 'Jordan Lee');
   agent = await createSignedInUser(ctx, 'agent', 'Alex Rivera');
+  admin = await createSignedInUser(ctx, 'admin', 'Dana Admin');
 });
 
 describe('creating tickets', () => {
@@ -92,11 +94,12 @@ describe('access', () => {
   it('lets agents see every ticket', async () => {
     await openTicket(ctx, customer);
     await openTicket(ctx, otherCustomer);
-    expect((await as(ctx, agent).get('/api/tickets')).json().total).toBe(2);
+    expect((await as(ctx, agent).get('/api/tickets?view=all')).json().total).toBe(2);
   });
 
-  it('keeps the ticket timeline away from customers', async () => {
+  it('keeps view counts and events away from customers', async () => {
     const ticket = await openTicket(ctx, customer);
+    expect((await as(ctx, customer).get('/api/tickets/counts')).statusCode).toBe(403);
     expect((await as(ctx, customer).get(`/api/tickets/${ticket.id}/events`)).statusCode).toBe(403);
   });
 });
@@ -163,5 +166,44 @@ describe('updating tickets', () => {
       404,
     );
     expect((await as(ctx, agent).get('/api/tickets/abc')).statusCode).toBe(400);
+  });
+});
+
+describe('views', () => {
+  async function seedQueue() {
+    const a = await openTicket(ctx, customer, { subject: 'Unassigned one' });
+    const b = await openTicket(ctx, customer, { subject: 'Assigned to me' });
+    const c = await openTicket(ctx, otherCustomer, { subject: 'Assigned to admin' });
+    const d = await openTicket(ctx, otherCustomer, { subject: 'Already solved' });
+    await as(ctx, agent).patch(`/api/tickets/${b.id}`, { assigneeId: agent.id });
+    await as(ctx, agent).patch(`/api/tickets/${c.id}`, { assigneeId: admin.id });
+    await as(ctx, agent).patch(`/api/tickets/${d.id}`, { status: 'solved', assigneeId: agent.id });
+    return { a, b, c, d };
+  }
+
+  const subjects = (res: { json(): { items: { subject: string }[] } }) =>
+    res
+      .json()
+      .items.map((t) => t.subject)
+      .sort();
+
+  it('filters by view', async () => {
+    await seedQueue();
+    const view = (name: string) => as(ctx, agent).get(`/api/tickets?view=${name}`);
+    expect(subjects(await view('unassigned'))).toEqual(['Unassigned one']);
+    expect(subjects(await view('mine'))).toEqual(['Assigned to me']);
+    expect(subjects(await view('open'))).toEqual([
+      'Assigned to admin',
+      'Assigned to me',
+      'Unassigned one',
+    ]);
+    expect(subjects(await view('solved'))).toEqual(['Already solved']);
+    expect((await view('all')).json().total).toBe(4);
+  });
+
+  it('counts tickets per view', async () => {
+    await seedQueue();
+    const counts = (await as(ctx, agent).get('/api/tickets/counts')).json();
+    expect(counts).toEqual({ unassigned: 1, mine: 1, open: 3 });
   });
 });
