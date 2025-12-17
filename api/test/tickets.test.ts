@@ -204,6 +204,16 @@ describe('views', () => {
   it('counts tickets per view', async () => {
     await seedQueue();
     const counts = (await as(ctx, agent).get('/api/tickets/counts')).json();
-    expect(counts).toEqual({ unassigned: 1, mine: 1, open: 3 });
+    expect(counts).toEqual({ unassigned: 1, mine: 1, open: 3, overdue: 0 });
+  });
+
+  it('lists overdue tickets once a target passes', async () => {
+    await openTicket(ctx, customer, { subject: 'Slow one', priority: 'normal' });
+    await openTicket(ctx, customer, { subject: 'Fresh one', priority: 'low' });
+    // Normal: first reply due within 8 business hours -> Thu 10:00.
+    ctx.setNow('2026-03-05T10:30:00Z');
+    const res = await as(ctx, agent).get('/api/tickets?view=overdue');
+    expect(subjects(res)).toEqual(['Slow one']);
+    expect(res.json().items[0].sla.firstResponse.state).toBe('breached');
   });
 });

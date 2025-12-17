@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lt, or, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db, DbOrTx } from '../../db/client.js';
 import {
@@ -50,7 +50,18 @@ export interface ListTicketsInput {
 
 const unsolved = () => inArray(tickets.status, [...UNSOLVED_STATUSES]);
 
-function viewCondition(view: TicketView, viewer: User): SQL | undefined {
+/** Unsolved tickets past a first-response or (running) resolution target. */
+export function overdueCondition(now: Date): SQL {
+  return and(
+    unsolved(),
+    or(
+      and(isNull(tickets.firstRespondedAt), lt(tickets.firstResponseDueAt, now)),
+      lt(tickets.resolutionDueAt, now),
+    ),
+  )!;
+}
+
+function viewCondition(view: TicketView, viewer: User, now: Date): SQL | undefined {
   switch (view) {
     case 'unassigned':
       return and(unsolved(), isNull(tickets.assigneeId));
@@ -58,6 +69,8 @@ function viewCondition(view: TicketView, viewer: User): SQL | undefined {
       return and(unsolved(), eq(tickets.assigneeId, viewer.id));
     case 'open':
       return unsolved();
+    case 'overdue':
+      return overdueCondition(now);
     case 'solved':
       return inArray(tickets.status, ['solved', 'closed']);
     case 'all':
@@ -70,7 +83,7 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
   if (!isStaff(viewer)) {
     conditions.push(eq(tickets.requesterId, viewer.id));
   } else if (input.view) {
-    conditions.push(viewCondition(input.view, viewer));
+    conditions.push(viewCondition(input.view, viewer, now));
   }
 
   const where = and(...conditions);
@@ -92,17 +105,18 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
 }
 
 /** Ticket counts for the agent sidebar. */
-export async function viewCounts(db: Db, viewer: User) {
+export async function viewCounts(db: Db, viewer: User, now: Date) {
   const countWhere = async (where: SQL | undefined) => {
     const [row] = await db.select({ value: count() }).from(tickets).where(where);
     return row?.value ?? 0;
   };
-  const [unassigned, mine, open] = await Promise.all([
-    countWhere(viewCondition('unassigned', viewer)),
-    countWhere(viewCondition('mine', viewer)),
-    countWhere(viewCondition('open', viewer)),
+  const [unassigned, mine, open, overdue] = await Promise.all([
+    countWhere(viewCondition('unassigned', viewer, now)),
+    countWhere(viewCondition('mine', viewer, now)),
+    countWhere(viewCondition('open', viewer, now)),
+    countWhere(viewCondition('overdue', viewer, now)),
   ]);
-  return { unassigned, mine, open };
+  return { unassigned, mine, open, overdue };
 }
 
 // ---------------------------------------------------------------------------

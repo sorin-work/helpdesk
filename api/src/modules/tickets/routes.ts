@@ -52,7 +52,7 @@ export async function ticketRoutes(app: FastifyInstance) {
   });
 
   app.get('/tickets/counts', { preHandler: app.requireRole('agent', 'admin') }, async (request) => {
-    return viewCounts(app.db, currentUser(request));
+    return viewCounts(app.db, currentUser(request), app.now());
   });
 
   app.post('/tickets', { preHandler: app.authenticate }, async (request, reply) => {
