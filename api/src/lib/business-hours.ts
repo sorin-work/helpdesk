@@ -176,7 +176,9 @@ export function addBusinessMinutes(
       const from = Math.max(cursor, window[0]);
       if (from < window[1]) {
         const available = window[1] - from;
-        if (remaining < available) return new Date(from + remaining);
+        // A target that runs out exactly at closing time is due at closing
+        // time, not at the next opening.
+        if (remaining <= available) return new Date(from + remaining);
         remaining -= available;
       }
     }

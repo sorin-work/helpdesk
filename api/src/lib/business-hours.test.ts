@@ -66,6 +66,12 @@ describe('addBusinessMinutes', () => {
     );
   });
 
+  it('is due at closing time when the target ends exactly then', () => {
+    expect(iso(addBusinessMinutes(utc('2026-03-04T15:00:00Z'), 120, office))).toBe(
+      '2026-03-04T17:00:00.000Z',
+    );
+  });
+
   it('spans several days for long targets', () => {
     // 5 business days of 8h from Wednesday 10:00 -> next Wednesday 10:00
     expect(iso(addBusinessMinutes(utc('2026-03-04T10:00:00Z'), 5 * 8 * 60, office))).toBe(
