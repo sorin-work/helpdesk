@@ -76,6 +76,28 @@ describe('public replies', () => {
     const res = await reply(customer, ticket.id, { body: 'One more thing.' });
     expect(res.json().status).toBe('new');
   });
+
+  it('refuses replies on closed tickets', async () => {
+    const ticket = await openTicket(ctx, customer);
+    await reply(agent, ticket.id, { body: 'Done', status: 'solved' });
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { status: 'closed' });
+    const res = await reply(customer, ticket.id, { body: 'Hello?' });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('rejects invalid status changes without saving the message', async () => {
+    const ticket = await openTicket(ctx, customer);
+    const res = await reply(agent, ticket.id, { body: 'Closing', status: 'closed' });
+    expect(res.statusCode).toBe(400);
+    const detail = (await as(ctx, agent).get(`/api/tickets/${ticket.id}`)).json();
+    expect(detail.messages).toHaveLength(1);
+  });
+
+  it('does not let customers change the status through a reply', async () => {
+    const ticket = await openTicket(ctx, customer);
+    const res = await reply(customer, ticket.id, { body: 'Done', status: 'solved' });
+    expect(res.statusCode).toBe(400);
+  });
 });
 
 describe('internal notes', () => {
@@ -104,5 +126,11 @@ describe('internal notes', () => {
     expect(res.json().status).toBe('new');
     expect(res.json().assignee).toBeNull();
     expect(res.json().sla.firstResponse.state).toBe('on_track');
+  });
+
+  it('cannot be written by customers', async () => {
+    const ticket = await openTicket(ctx, customer);
+    const res = await reply(customer, ticket.id, { body: 'Sneaky', internal: true });
+    expect(res.statusCode).toBe(400);
   });
 });
