@@ -19,6 +19,13 @@ const ticketId = z.coerce.number().int().positive();
 
 const listQuery = z.object({
   view: z.enum(VIEWS).optional(),
+  status: z
+    .string()
+    .transform((value) => value.split(',').filter(Boolean))
+    .pipe(z.array(z.enum(TICKET_STATUSES)))
+    .optional(),
+  priority: z.enum(TICKET_PRIORITIES).optional(),
+  assignee: z.union([z.literal('none'), z.coerce.number().int().positive()]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
@@ -48,7 +55,12 @@ const messageBody = z.object({
 export async function ticketRoutes(app: FastifyInstance) {
   app.get('/tickets', { preHandler: app.authenticate }, async (request) => {
     const query = parse(listQuery, request.query);
-    return listTickets(app.db, currentUser(request), query, app.now());
+    return listTickets(
+      app.db,
+      currentUser(request),
+      { ...query, assigneeId: query.assignee },
+      app.now(),
+    );
   });
 
   app.get('/tickets/counts', { preHandler: app.requireRole('agent', 'admin') }, async (request) => {

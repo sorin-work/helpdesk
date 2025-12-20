@@ -44,6 +44,9 @@ export type TicketView = (typeof VIEWS)[number];
 
 export interface ListTicketsInput {
   view?: TicketView;
+  status?: TicketStatus[];
+  priority?: TicketPriority;
+  assigneeId?: number | 'none';
   page: number;
   pageSize: number;
 }
@@ -85,6 +88,10 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
   } else if (input.view) {
     conditions.push(viewCondition(input.view, viewer, now));
   }
+  if (input.status?.length) conditions.push(inArray(tickets.status, input.status));
+  if (input.priority) conditions.push(eq(tickets.priority, input.priority));
+  if (input.assigneeId === 'none') conditions.push(isNull(tickets.assigneeId));
+  else if (input.assigneeId) conditions.push(eq(tickets.assigneeId, input.assigneeId));
 
   const where = and(...conditions);
   const [rows, [total]] = await Promise.all([

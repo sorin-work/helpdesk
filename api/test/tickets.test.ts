@@ -216,4 +216,28 @@ describe('views', () => {
     expect(subjects(res)).toEqual(['Slow one']);
     expect(res.json().items[0].sla.firstResponse.state).toBe('breached');
   });
+
+  it('filters by status, priority, assignee and tag', async () => {
+    const { a, b } = await seedQueue();
+    await as(ctx, agent).patch(`/api/tickets/${a.id}`, { priority: 'high' });
+
+    expect(subjects(await as(ctx, agent).get('/api/tickets?status=solved'))).toEqual([
+      'Already solved',
+    ]);
+    expect(subjects(await as(ctx, agent).get('/api/tickets?priority=high'))).toEqual([
+      'Unassigned one',
+    ]);
+    expect(
+      subjects(await as(ctx, agent).get(`/api/tickets?assignee=${agent.id}&status=new`)),
+    ).toEqual(['Assigned to me']);
+    expect(subjects(await as(ctx, agent).get('/api/tickets?view=all&assignee=none'))).toEqual([
+      'Unassigned one',
+    ]);
+    expect(b.id).toBeGreaterThan(a.id);
+  });
+
+  it('rejects unknown filters', async () => {
+    expect((await as(ctx, agent).get('/api/tickets?view=everything')).statusCode).toBe(400);
+    expect((await as(ctx, agent).get('/api/tickets?status=open,bogus')).statusCode).toBe(400);
+  });
 });
