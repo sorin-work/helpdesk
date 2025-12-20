@@ -146,6 +146,14 @@ describe('updating tickets', () => {
     expect(res.json().error.message).toBe('A new ticket cannot be moved to closed');
   });
 
+  it('does not change closed tickets', async () => {
+    const ticket = await openTicket(ctx, customer);
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { status: 'solved' });
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { status: 'closed' });
+    const res = await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { priority: 'high' });
+    expect(res.statusCode).toBe(409);
+  });
+
   it('only assigns to active staff', async () => {
     const ticket = await openTicket(ctx, customer);
     const res = await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, {

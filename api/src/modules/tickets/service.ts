@@ -10,7 +10,7 @@ import {
   type TicketStatus,
   type User,
 } from '../../db/schema/index.js';
-import { badRequest, notFound } from '../../lib/errors.js';
+import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { canTransition, UNSOLVED_STATUSES } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
 import { getPolicy, getSchedule } from '../sla/service.js';
@@ -250,6 +250,9 @@ export async function updateTicket(
   await db.transaction(async (tx) => {
     const [ticket] = await tx.select().from(tickets).where(eq(tickets.id, id)).for('update');
     if (!ticket) throw notFound('Ticket');
+    if (ticket.status === 'closed' && Object.keys(input).length > 0) {
+      throw conflict('Closed tickets cannot be changed');
+    }
 
     const patch: Partial<Ticket> = {};
     const schedule = await getSchedule(tx);
