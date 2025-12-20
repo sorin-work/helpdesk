@@ -240,4 +240,24 @@ describe('views', () => {
     expect((await as(ctx, agent).get('/api/tickets?view=everything')).statusCode).toBe(400);
     expect((await as(ctx, agent).get('/api/tickets?status=open,bogus')).statusCode).toBe(400);
   });
+
+  it('sorts and paginates', async () => {
+    for (const subject of ['First', 'Second', 'Third']) {
+      await openTicket(ctx, customer, { subject });
+      ctx.setNow(new Date(ctx.app.now().getTime() + 60_000));
+    }
+    const page1 = (await as(ctx, agent).get('/api/tickets?sort=oldest&pageSize=2')).json();
+    expect(page1.items.map((t: { subject: string }) => t.subject)).toEqual(['First', 'Second']);
+    expect(page1.total).toBe(3);
+    const page2 = (await as(ctx, agent).get('/api/tickets?sort=oldest&pageSize=2&page=2')).json();
+    expect(page2.items.map((t: { subject: string }) => t.subject)).toEqual(['Third']);
+  });
+
+  it('sorts by the next deadline', async () => {
+    await openTicket(ctx, customer, { subject: 'Low', priority: 'low' });
+    await openTicket(ctx, customer, { subject: 'High', priority: 'high' });
+    await openTicket(ctx, customer, { subject: 'Normal', priority: 'normal' });
+    const items = (await as(ctx, agent).get('/api/tickets?sort=due')).json().items;
+    expect(items.map((t: { subject: string }) => t.subject)).toEqual(['High', 'Normal', 'Low']);
+  });
 });

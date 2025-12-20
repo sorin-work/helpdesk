@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db, DbOrTx } from '../../db/client.js';
 import {
@@ -42,11 +42,15 @@ function ticketRows(db: DbOrTx) {
 export const VIEWS = ['unassigned', 'mine', 'open', 'overdue', 'solved', 'all'] as const;
 export type TicketView = (typeof VIEWS)[number];
 
+export const SORTS = ['updated', 'created', 'oldest', 'due', 'priority'] as const;
+export type TicketSort = (typeof SORTS)[number];
+
 export interface ListTicketsInput {
   view?: TicketView;
   status?: TicketStatus[];
   priority?: TicketPriority;
   assigneeId?: number | 'none';
+  sort: TicketSort;
   page: number;
   pageSize: number;
 }
@@ -81,6 +85,29 @@ function viewCondition(view: TicketView, viewer: User, now: Date): SQL | undefin
   }
 }
 
+const priorityRank = sql`case ${tickets.priority}
+  when 'urgent' then 4 when 'high' then 3 when 'normal' then 2 else 1 end`;
+
+// The next deadline that still matters: first response until it happens, then resolution.
+const nextDue = sql`case when ${tickets.firstRespondedAt} is null
+  then least(${tickets.firstResponseDueAt}, ${tickets.resolutionDueAt})
+  else ${tickets.resolutionDueAt} end`;
+
+function orderFor(sort: TicketSort): SQL[] {
+  switch (sort) {
+    case 'created':
+      return [desc(tickets.createdAt)];
+    case 'oldest':
+      return [asc(tickets.createdAt)];
+    case 'due':
+      return [sql`${nextDue} asc nulls last`, asc(tickets.id)];
+    case 'priority':
+      return [sql`${priorityRank} desc`, desc(tickets.updatedAt)];
+    case 'updated':
+      return [desc(tickets.updatedAt)];
+  }
+}
+
 export async function listTickets(db: Db, viewer: User, input: ListTicketsInput, now: Date) {
   const conditions: (SQL | undefined)[] = [];
   if (!isStaff(viewer)) {
@@ -97,7 +124,7 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
   const [rows, [total]] = await Promise.all([
     ticketRows(db)
       .where(where)
-      .orderBy(desc(tickets.updatedAt))
+      .orderBy(...orderFor(input.sort))
       .limit(input.pageSize)
       .offset((input.page - 1) * input.pageSize),
     db.select({ value: count() }).from(tickets).where(where),

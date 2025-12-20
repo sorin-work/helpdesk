@@ -10,6 +10,7 @@ import {
   createTicket,
   getTicketDetail,
   listTickets,
+  SORTS,
   updateTicket,
   viewCounts,
   VIEWS,
@@ -26,6 +27,7 @@ const listQuery = z.object({
     .optional(),
   priority: z.enum(TICKET_PRIORITIES).optional(),
   assignee: z.union([z.literal('none'), z.coerce.number().int().positive()]).optional(),
+  sort: z.enum(SORTS).default('updated'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
