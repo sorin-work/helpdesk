@@ -50,12 +50,12 @@ describe('business hours', () => {
   it('validates the schedule', async () => {
     const bad = await as(ctx, admin).put('/api/settings/business-hours', {
       timezone: 'Mars/Olympus',
-      days: DEFAULT_SCHEDULE.days,
+      days: { ...DEFAULT_SCHEDULE.days, mon: { start: '18:00', end: '09:00' } },
       holidays: ['someday'],
     });
     expect(bad.statusCode).toBe(400);
     const paths = bad.json().error.details.map((d: { path: string }) => d.path);
-    expect(paths).toEqual(expect.arrayContaining(['timezone', 'holidays.0']));
+    expect(paths).toEqual(expect.arrayContaining(['timezone', 'days.mon.end', 'holidays.0']));
   });
 
   it('needs at least one working day', async () => {

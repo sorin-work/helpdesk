@@ -10,6 +10,7 @@ import {
 import {
   DEFAULT_SCHEDULE,
   isValidTimezone,
+  parseClock,
   WEEKDAYS,
   type BusinessSchedule,
 } from '../../lib/business-hours.js';
@@ -27,7 +28,13 @@ export const DEFAULT_POLICIES: Record<TicketPriority, SlaTarget> = {
 
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM (24h)');
 
-const dayHours = z.object({ start: clock, end: clock }).nullable();
+const dayHours = z
+  .object({ start: clock, end: clock })
+  .refine((d) => parseClock(d.end) > parseClock(d.start), {
+    message: 'End time must be after start time',
+    path: ['end'],
+  })
+  .nullable();
 
 export const scheduleSchema = z
   .object({
