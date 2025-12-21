@@ -101,12 +101,18 @@ function offsetAt(instant: number, timezone: string): number {
   return asUtc - Math.floor(instant / 1000) * 1000;
 }
 
-/** UTC instant of a local wall-clock time. */
+/** UTC instant of a local wall-clock time. Times skipped by DST move forward. */
 export function zonedTimeToUtc(date: CivilDate, minutesOfDay: number, timezone: string): number {
   const guess = Date.UTC(date.year, date.month - 1, date.day) + minutesOfDay * MINUTE;
   const first = guess - offsetAt(guess, timezone);
   const second = guess - offsetAt(first, timezone);
-  return second;
+  const matches = (instant: number) => instant + offsetAt(instant, timezone) === guess;
+  // Ambiguous (clocks going back): take the earlier one.
+  if (matches(first) && matches(second)) return Math.min(first, second);
+  if (matches(first)) return first;
+  if (matches(second)) return second;
+  // In a gap (clocks going forward): the wall-clock time does not exist, use the later one.
+  return Math.max(first, second);
 }
 
 function localDate(instant: number, timezone: string): CivilDate {
