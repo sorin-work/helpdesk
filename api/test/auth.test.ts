@@ -44,6 +44,16 @@ describe('POST /api/auth/signup', () => {
     expect(me.json().email).toBe('casey@example.com');
   });
 
+  it('ignores attempts to sign up as staff', async () => {
+    const res = await signup({
+      email: 'x@example.com',
+      name: 'X',
+      password: 'long-enough',
+      role: 'admin',
+    });
+    expect(res.json().role).toBe('customer');
+  });
+
   it('rejects duplicate emails regardless of case', async () => {
     await signup({ email: 'casey@example.com', name: 'Casey', password: 'long-enough' });
     const res = await signup({
@@ -53,6 +63,13 @@ describe('POST /api/auth/signup', () => {
     });
     expect(res.statusCode).toBe(409);
     expect(res.json().error.code).toBe('conflict');
+  });
+
+  it('validates the input', async () => {
+    const res = await signup({ email: 'not-an-email', name: '', password: 'short' });
+    expect(res.statusCode).toBe(400);
+    const paths = res.json().error.details.map((d: { path: string }) => d.path);
+    expect(paths).toEqual(expect.arrayContaining(['email', 'name', 'password']));
   });
 });
 
@@ -93,6 +110,14 @@ describe('session', () => {
     const res = await ctx.app.inject({ url: '/api/auth/me' });
     expect(res.statusCode).toBe(401);
     expect(res.json().error.code).toBe('unauthorized');
+  });
+
+  it('rejects a tampered token', async () => {
+    const res = await ctx.app.inject({
+      url: '/api/auth/me',
+      headers: { cookie: 'helpdesk_session=eyJhbGciOiJIUzI1NiJ9.e30.bad' },
+    });
+    expect(res.statusCode).toBe(401);
   });
 
   it('clears the cookie on logout', async () => {
