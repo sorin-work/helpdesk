@@ -39,6 +39,15 @@ describe('business hours', () => {
     );
   });
 
+  it('saves a schedule, de-duplicating and sorting holidays', async () => {
+    const res = await as(ctx, admin).put('/api/settings/business-hours', schedule);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().holidays).toEqual(['2026-01-01', '2026-12-25']);
+    expect((await as(ctx, agent).get('/api/settings/business-hours')).json().timezone).toBe(
+      'Europe/Bucharest',
+    );
+  });
+
   it('applies to SLA targets of new tickets', async () => {
     await as(ctx, admin).put('/api/settings/business-hours', schedule);
     const customer = await createSignedInUser(ctx, 'customer');

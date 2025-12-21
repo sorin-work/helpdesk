@@ -45,7 +45,10 @@ export const scheduleSchema = z
         typeof dayHours
       >,
     ),
-    holidays: z.array(z.iso.date()).max(366),
+    holidays: z
+      .array(z.iso.date())
+      .max(366)
+      .transform((dates) => [...new Set(dates)].sort()),
   })
   .refine((s) => Object.values(s.days).some((d) => d !== null), {
     message: 'At least one day needs working hours',
