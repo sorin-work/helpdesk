@@ -42,5 +42,9 @@ export function createAppRouter() {
     return checkAccess(to.meta, auth.user, to.fullPath);
   });
 
+  router.afterEach((to) => {
+    document.title = to.meta.title ? `${to.meta.title} · Helpdesk` : 'Helpdesk';
+  });
+
   return router;
 }
