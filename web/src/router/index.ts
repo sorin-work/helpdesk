@@ -30,6 +30,12 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('../views/SignupView.vue'),
     meta: { guest: true, title: 'Create an account' },
   },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('../views/NotFoundView.vue'),
+    meta: { title: 'Not found' },
+  },
 ];
 
 export function createAppRouter() {
@@ -38,7 +44,7 @@ export function createAppRouter() {
   router.beforeEach(async (to) => {
     const auth = useAuthStore();
     await auth.load();
-    if (to.name === 'home') return true;
+    if (to.name === 'home' || to.name === 'not-found') return true;
     return checkAccess(to.meta, auth.user, to.fullPath);
   });
 
