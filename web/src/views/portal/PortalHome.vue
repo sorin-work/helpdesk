@@ -6,14 +6,22 @@ import PaginationBar from '../../components/PaginationBar.vue';
 import StatusBadge from '../../components/StatusBadge.vue';
 import { formatDate, formatRelative } from '../../utils/format';
 
+const filter = ref<'open' | 'solved' | 'all'>('open');
 const page = ref(1);
 const result = ref<Page<TicketSummary> | null>(null);
 const error = ref('');
+
+const STATUS_FILTER = {
+  open: 'new,open,pending,on_hold',
+  solved: 'solved,closed',
+  all: undefined,
+};
 
 async function load() {
   error.value = '';
   try {
     result.value = await api.get<Page<TicketSummary>>('/tickets', {
+      status: STATUS_FILTER[filter.value],
       page: page.value,
       pageSize: 20,
     });
@@ -22,6 +30,10 @@ async function load() {
   }
 }
 
+watch(filter, () => {
+  page.value = 1;
+  void load();
+});
 watch(page, load);
 onMounted(load);
 </script>
@@ -31,6 +43,19 @@ onMounted(load);
     <div class="page-header">
       <h1>Your requests</h1>
       <RouterLink to="/portal/new" class="btn btn-primary">New request</RouterLink>
+    </div>
+
+    <div class="row filters">
+      <button
+        v-for="f in ['open', 'solved', 'all'] as const"
+        :key="f"
+        type="button"
+        class="btn btn-small"
+        :class="{ 'btn-primary': filter === f }"
+        @click="filter = f"
+      >
+        {{ f === 'open' ? 'Open' : f === 'solved' ? 'Solved' : 'All' }}
+      </button>
     </div>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
