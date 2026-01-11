@@ -1,5 +1,5 @@
 import vue from '@vitejs/plugin-vue';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 const apiTarget = process.env.API_URL ?? 'http://localhost:4410';
 
@@ -10,5 +10,10 @@ export default defineConfig({
     proxy: {
       '/api': { target: apiTarget, changeOrigin: false },
     },
+  },
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts'],
+    restoreMocks: true,
   },
 });
