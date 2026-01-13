@@ -36,6 +36,14 @@ watch(filter, () => {
 });
 watch(page, load);
 onMounted(load);
+
+/** Customers think in "we are on it" / "waiting for you" rather than our statuses. */
+function hint(ticket: TicketSummary): string {
+  if (ticket.status === 'pending') return 'Waiting for your reply';
+  if (ticket.status === 'new') return 'Received';
+  if (ticket.status === 'solved') return 'Solved - reply if you still need help';
+  return '';
+}
 </script>
 
 <template>
@@ -80,6 +88,7 @@ onMounted(load);
         <div class="faint">
           #{{ ticket.id }} · opened {{ formatDate(ticket.createdAt) }} · last activity
           {{ formatRelative(ticket.lastMessageAt) }}
+          <template v-if="hint(ticket)"> · {{ hint(ticket) }}</template>
         </div>
       </RouterLink>
       <PaginationBar
