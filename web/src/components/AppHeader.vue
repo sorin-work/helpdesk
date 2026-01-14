@@ -20,6 +20,7 @@ async function logout() {
 
     <nav v-if="!auth.isStaff" class="nav">
       <RouterLink to="/portal">My requests</RouterLink>
+      <RouterLink to="/portal/new">New request</RouterLink>
     </nav>
 
     <div class="user">

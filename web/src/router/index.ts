@@ -39,6 +39,12 @@ export const routes: RouteRecordRaw[] = [
     meta: { roles: ['customer'], title: 'Your requests' },
   },
   {
+    path: '/portal/new',
+    name: 'portal-new',
+    component: () => import('../views/NewTicketView.vue'),
+    meta: { roles: ['customer'], title: 'New request' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue'),
