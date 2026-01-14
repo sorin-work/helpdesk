@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { errorMessage } from '../api/client';
+import { ApiError, errorMessage } from '../api/client';
 import { useAuthStore } from '../stores/auth';
 
 const auth = useAuthStore();
@@ -11,16 +11,19 @@ const name = ref('');
 const email = ref('');
 const password = ref('');
 const error = ref('');
+const fieldErrors = ref<Record<string, string>>({});
 const busy = ref(false);
 
 async function submit() {
   error.value = '';
+  fieldErrors.value = {};
   busy.value = true;
   try {
     await auth.signup(name.value, email.value, password.value);
     await router.push('/portal');
   } catch (err) {
-    error.value = errorMessage(err);
+    if (err instanceof ApiError && err.details.length) fieldErrors.value = err.fieldErrors();
+    else error.value = errorMessage(err);
   } finally {
     busy.value = false;
   }
@@ -38,10 +41,12 @@ async function submit() {
         <div class="field">
           <label for="name">Your name</label>
           <input id="name" v-model="name" type="text" autocomplete="name" required />
+          <div v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name }}</div>
         </div>
         <div class="field">
           <label for="email">Email</label>
           <input id="email" v-model="email" type="email" autocomplete="email" required />
+          <div v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</div>
         </div>
         <div class="field">
           <label for="password">Password</label>
@@ -53,7 +58,8 @@ async function submit() {
             minlength="8"
             required
           />
-          <div class="faint">At least 8 characters.</div>
+          <div v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</div>
+          <div v-else class="faint">At least 8 characters.</div>
         </div>
         <button type="submit" class="btn btn-primary wide" :disabled="busy">
           {{ busy ? 'Creating account…' : 'Create account' }}
