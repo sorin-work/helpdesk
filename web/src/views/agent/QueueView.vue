@@ -93,7 +93,10 @@ function open(ticket: TicketSummary) {
           v-for="v in VIEWS"
           :key="v.key"
           :to="`/queue/${v.key}`"
-          :class="{ active: view === v.key }"
+          :class="{
+            active: view === v.key,
+            overdue: v.key === 'overdue' && counts.counts.overdue > 0,
+          }"
         >
           <span>{{ v.label }}</span>
           <span v-if="v.counted" class="count">{{
@@ -223,6 +226,11 @@ function open(ticket: TicketSummary) {
 .count {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.overdue .count {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .toolbar {
