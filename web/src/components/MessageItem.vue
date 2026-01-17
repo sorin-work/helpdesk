@@ -36,6 +36,11 @@ defineProps<{ message: Message }>();
   border-bottom: none;
 }
 
+.message.internal {
+  background: var(--note);
+  border-left: 3px solid var(--note-border);
+}
+
 .avatar {
   flex: none;
   width: 34px;
