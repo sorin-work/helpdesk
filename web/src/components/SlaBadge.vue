@@ -41,6 +41,12 @@ const title = computed(() => {
   color: var(--text-muted);
 }
 
+.sla-due_soon {
+  background: var(--warning-soft);
+  border-color: #f5d39c;
+  color: var(--warning);
+}
+
 .sla-breached {
   background: var(--danger-soft);
   border-color: #f5c0c0;
