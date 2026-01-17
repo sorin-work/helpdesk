@@ -171,6 +171,9 @@ function open(ticket: TicketSummary) {
             </tr>
           </tbody>
         </table>
+        <div v-if="result && result.items.length === 0" class="empty">
+          {{ loading ? 'Loading…' : 'No tickets here. Nice work!' }}
+        </div>
         <PaginationBar
           v-if="result && result.total > result.pageSize"
           :page="result.page"
