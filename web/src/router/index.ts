@@ -8,6 +8,8 @@ declare module 'vue-router' {
   }
 }
 
+const staff = ['agent', 'admin'] as const;
+
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -50,6 +52,15 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('../views/portal/PortalTicket.vue'),
     props: (route) => ({ id: Number(route.params.id) }),
     meta: { roles: ['customer'], title: 'Request' },
+  },
+
+  // Agent workspace
+  {
+    path: '/queue/:view(unassigned|mine|open|overdue|solved|all)?',
+    name: 'queue',
+    component: () => import('../views/agent/QueueView.vue'),
+    props: (route) => ({ view: route.params.view || 'mine' }),
+    meta: { roles: [...staff], title: 'Tickets' },
   },
   {
     path: '/:pathMatch(.*)*',

@@ -18,7 +18,10 @@ async function logout() {
       <span>Helpdesk</span>
     </RouterLink>
 
-    <nav v-if="!auth.isStaff" class="nav">
+    <nav v-if="auth.isStaff" class="nav">
+      <RouterLink to="/queue/mine" :class="{ active: $route.name === 'queue' }">Tickets</RouterLink>
+    </nav>
+    <nav v-else class="nav">
       <RouterLink to="/portal">My requests</RouterLink>
       <RouterLink to="/portal/new">New request</RouterLink>
     </nav>
