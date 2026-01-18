@@ -113,7 +113,9 @@ const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
               <div>
                 <strong>{{ ticket.requester.name }}</strong>
               </div>
-              <div class="muted">{{ ticket.requester.email }}</div>
+              <a :href="`mailto:${ticket.requester.email}`" class="muted">
+                {{ ticket.requester.email }}
+              </a>
             </div>
 
             <div>
