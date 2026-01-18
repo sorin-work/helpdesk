@@ -115,6 +115,10 @@ p {
   padding: 20px;
 }
 
+.card + .card {
+  margin-top: 16px;
+}
+
 .stack > * + * {
   margin-top: 12px;
 }
