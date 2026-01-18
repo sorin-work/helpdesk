@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'vitest';
+import { formatDuration, formatRelative, initials } from './format';
+
+describe('formatDuration', () => {
+  it.each([
+    [0, '0m'],
+    [45, '45m'],
+    [60, '1h'],
+    [200, '3h 20m'],
+    [1440, '1d'],
+    [3120, '2d 4h'],
+  ])('%i minutes -> %s', (minutes, text) => {
+    expect(formatDuration(minutes)).toBe(text);
+  });
+
+  it('shows a dash for missing values', () => {
+    expect(formatDuration(null)).toBe('-');
+    expect(formatDuration(undefined)).toBe('-');
+  });
+});
+
+describe('formatRelative', () => {
+  const now = new Date('2026-03-04T10:00:00Z');
+
+  it('describes the future and the past', () => {
+    expect(formatRelative('2026-03-04T12:30:00Z', now)).toBe('in 2h 30m');
+    expect(formatRelative('2026-03-02T10:00:00Z', now)).toBe('2d ago');
+  });
+
+  it('says just now for under a minute', () => {
+    expect(formatRelative('2026-03-04T10:00:20Z', now)).toBe('just now');
+  });
+});
+
+describe('small formatters', () => {
+  it('builds initials from up to two names', () => {
+    expect(initials('Alex Rivera')).toBe('AR');
+    expect(initials('maria del carmen')).toBe('MD');
+    expect(initials('')).toBe('');
+  });
+});
