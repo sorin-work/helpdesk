@@ -178,9 +178,15 @@ const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
               <span>First response</span>
               <SlaBadge :clock="ticket.sla.firstResponse" label="" />
             </div>
+            <div v-if="ticket.sla.firstResponse.dueAt" class="faint">
+              Target {{ formatDateTime(ticket.sla.firstResponse.dueAt) }}
+            </div>
             <div class="sla-row">
               <span>Resolution</span>
               <SlaBadge :clock="ticket.sla.resolution" label="" />
+            </div>
+            <div v-if="ticket.sla.resolution.dueAt" class="faint">
+              Target {{ formatDateTime(ticket.sla.resolution.dueAt) }}
             </div>
             <div class="row">
               <StatusBadge :status="ticket.status" />
