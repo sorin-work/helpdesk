@@ -19,7 +19,10 @@ async function submit() {
   try {
     await auth.login(email.value, password.value);
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null;
-    await router.push(redirect ?? auth.homePath);
+    // Only follow local paths so the redirect cannot send people off-site.
+    await router.push(
+      redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : auth.homePath,
+    );
   } catch (err) {
     error.value = errorMessage(err);
   } finally {
