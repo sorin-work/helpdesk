@@ -39,6 +39,7 @@ async function submit() {
       ...(nextStatus.value && { status: nextStatus.value }),
     });
     body.value = '';
+    nextStatus.value = '';
   } catch (err) {
     error.value = errorMessage(err);
   } finally {
