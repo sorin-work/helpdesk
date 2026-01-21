@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api, errorMessage } from '../../api/client';
 import type {
@@ -75,10 +75,17 @@ watch(
 );
 watch(page, load);
 
+let timer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
   void load();
   void counts.refresh();
+  // Keep the queue fresh while it sits open on a second monitor.
+  timer = setInterval(() => {
+    void load();
+    void counts.refresh();
+  }, 60_000);
 });
+onBeforeUnmount(() => clearInterval(timer));
 
 function open(ticket: TicketSummary) {
   router.push(`/tickets/${ticket.id}`);
