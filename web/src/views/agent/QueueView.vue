@@ -62,6 +62,8 @@ async function load() {
 watch(
   () => props.view,
   () => {
+    // Overdue is only useful sorted by deadline.
+    if (props.view === 'overdue') filters.sort = 'due';
     void load();
     void counts.refresh();
   },
@@ -77,6 +79,7 @@ watch(page, load);
 
 let timer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
+  if (props.view === 'overdue') filters.sort = 'due';
   void load();
   void counts.refresh();
   // Keep the queue fresh while it sits open on a second monitor.
@@ -129,6 +132,8 @@ function open(ticket: TicketSummary) {
         </select>
         <select v-model="filters.sort" class="inline" aria-label="Sort">
           <option value="updated">Recently updated</option>
+          <option value="due">Next deadline</option>
+          <option value="priority">Priority</option>
           <option value="created">Newest</option>
           <option value="oldest">Oldest</option>
         </select>
