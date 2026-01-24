@@ -66,6 +66,7 @@ async function send(payload: ReplyPayload) {
   setTicket(await api.post<TicketDetail>(`/tickets/${props.id}/messages`, payload));
   await loadEvents();
   void counts.refresh();
+  toasts.success(payload.internal ? 'Note added' : 'Reply sent');
 }
 
 onMounted(async () => {
