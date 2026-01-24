@@ -46,6 +46,13 @@ async function submit() {
     busy.value = false;
   }
 }
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault();
+    void submit();
+  }
+}
 </script>
 
 <template>
@@ -73,7 +80,13 @@ async function submit() {
 
     <div class="card-body">
       <div v-if="error" class="alert alert-error">{{ error }}</div>
-      <textarea v-model="body" :placeholder="placeholder" aria-label="Message" rows="5" />
+      <textarea
+        v-model="body"
+        :placeholder="placeholder"
+        aria-label="Message"
+        rows="5"
+        @keydown="onKeydown"
+      />
       <div class="actions">
         <span class="spacer" />
         <select v-if="staff" v-model="nextStatus" class="inline" aria-label="Status after sending">
