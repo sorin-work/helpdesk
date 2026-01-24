@@ -62,6 +62,7 @@ async function load() {
 watch(
   () => props.view,
   () => {
+    page.value = 1;
     // Overdue is only useful sorted by deadline.
     if (props.view === 'overdue') filters.sort = 'due';
     void load();
