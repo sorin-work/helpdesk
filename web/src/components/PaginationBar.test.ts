@@ -17,4 +17,9 @@ describe('PaginationBar', () => {
     await wrapper.findAll('button')[0]!.trigger('click');
     expect(wrapper.emitted('change')).toEqual([[2]]);
   });
+
+  it('shows an empty range for an empty list', () => {
+    const wrapper = mount(PaginationBar, { props: { page: 1, pageSize: 25, total: 0 } });
+    expect(wrapper.text()).toContain('0–0 of 0');
+  });
 });

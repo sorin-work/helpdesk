@@ -5,7 +5,7 @@ const props = defineProps<{ page: number; pageSize: number; total: number }>();
 defineEmits<{ change: [page: number] }>();
 
 const pages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)));
-const from = computed(() => (props.page - 1) * props.pageSize + 1);
+const from = computed(() => (props.total === 0 ? 0 : (props.page - 1) * props.pageSize + 1));
 const to = computed(() => Math.min(props.total, props.page * props.pageSize));
 </script>
 
