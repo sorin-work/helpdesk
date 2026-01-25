@@ -31,7 +31,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - '4410:4410'
+      - '${API_PORT:-4410}:4410'
 
   web:
     build:
@@ -40,7 +40,7 @@ services:
     depends_on:
       - api
     ports:
-      - '5190:80'
+      - '${WEB_PORT:-5190}:80'
 
 volumes:
   db-data:
