@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { api, errorMessage } from '../../api/client';
 import type {
   ReplyPayload,
+  TagCount,
   TicketDetail,
   TicketEvent,
   TicketPriority,
@@ -13,6 +14,7 @@ import MessageItem from '../../components/MessageItem.vue';
 import ReplyComposer from '../../components/ReplyComposer.vue';
 import SlaBadge from '../../components/SlaBadge.vue';
 import StatusBadge from '../../components/StatusBadge.vue';
+import TagInput from '../../components/TagInput.vue';
 import TicketTimeline from '../../components/TicketTimeline.vue';
 import { useCountsStore } from '../../stores/counts';
 import { useToastStore } from '../../stores/toasts';
@@ -26,6 +28,8 @@ const toasts = useToastStore();
 const ticket = ref<TicketDetail | null>(null);
 const events = ref<TicketEvent[]>([]);
 const agents = ref<User[]>([]);
+const tagSuggestions = ref<string[]>([]);
+const tags = ref<string[]>([]);
 const error = ref('');
 
 const closed = computed(() => ticket.value?.status === 'closed');
@@ -36,6 +40,7 @@ async function loadEvents() {
 
 function setTicket(next: TicketDetail) {
   ticket.value = next;
+  tags.value = [...next.tags];
 }
 
 async function load() {
@@ -69,9 +74,18 @@ async function send(payload: ReplyPayload) {
   toasts.success(payload.internal ? 'Note added' : 'Reply sent');
 }
 
+watch(tags, (next) => {
+  if (ticket.value && next.join(',') !== ticket.value.tags.join(',')) void update({ tags: next });
+});
+
 onMounted(async () => {
   await load();
-  agents.value = (await api.get<{ items: User[] }>('/agents')).items;
+  const [team, tagList] = await Promise.all([
+    api.get<{ items: User[] }>('/agents'),
+    api.get<{ items: TagCount[] }>('/tags'),
+  ]);
+  agents.value = team.items;
+  tagSuggestions.value = tagList.items.map((t) => t.name);
 });
 
 const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
@@ -168,6 +182,11 @@ const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
                   </option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label>Tags</label>
+              <TagInput v-model="tags" :suggestions="tagSuggestions" />
             </div>
           </div>
         </div>

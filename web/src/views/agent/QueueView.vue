@@ -34,6 +34,7 @@ const VIEWS: { key: TicketView; label: string; counted?: boolean }[] = [
 const filters = reactive({
   status: '' as TicketStatus | '',
   priority: '' as TicketPriority | '',
+  tag: '',
   sort: 'updated' as TicketSort,
 });
 const page = ref(1);
@@ -49,6 +50,7 @@ async function load() {
       view: props.view,
       status: filters.status,
       priority: filters.priority,
+      tag: filters.tag.trim().toLowerCase(),
       sort: filters.sort,
       page: page.value,
     });
@@ -131,6 +133,15 @@ function open(ticket: TicketSummary) {
             {{ label }}
           </option>
         </select>
+        <input
+          v-model="filters.tag"
+          class="inline tag-filter"
+          type="text"
+          placeholder="Tag"
+          aria-label="Tag"
+          @keydown.enter="load"
+          @blur="load"
+        />
         <select v-model="filters.sort" class="inline" aria-label="Sort">
           <option value="updated">Recently updated</option>
           <option value="due">Next deadline</option>
@@ -166,6 +177,9 @@ function open(ticket: TicketSummary) {
                 <RouterLink :to="`/tickets/${ticket.id}`" class="subject" @click.stop>
                   <span class="faint">#{{ ticket.id }}</span> {{ ticket.subject }}
                 </RouterLink>
+                <div v-if="ticket.tags.length" class="tags">
+                  <span v-for="tag in ticket.tags" :key="tag" class="tag">{{ tag }}</span>
+                </div>
               </td>
               <td class="hide-mobile">{{ ticket.requester.name }}</td>
               <td><StatusBadge :status="ticket.status" /></td>

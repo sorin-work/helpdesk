@@ -32,6 +32,7 @@ export interface TicketSummary {
   priority: TicketPriority;
   requester: { id: number; name: string; email: string };
   assignee: { id: number; name: string } | null;
+  tags: string[];
   sla: Sla;
   createdAt: string;
   updatedAt: string;
@@ -67,6 +68,12 @@ export interface Page<T> {
 }
 
 export type ViewCounts = Record<'unassigned' | 'mine' | 'open' | 'overdue', number>;
+
+export interface TagCount {
+  name: string;
+  tickets: number;
+  open: number;
+}
 
 export interface ReplyPayload {
   body: string;
