@@ -169,6 +169,21 @@ describe('updating tickets', () => {
     expect(res.json().assignee).toBeNull();
   });
 
+  it('replaces tags, normalizing names', async () => {
+    const ticket = await openTicket(ctx, customer);
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { tags: ['Billing', 'refund'] });
+    const res = await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, {
+      tags: ['billing', 'VIP Customer'],
+    });
+    expect(res.json().tags).toEqual(['billing', 'vip-customer']);
+
+    const events = (await as(ctx, agent).get(`/api/tickets/${ticket.id}/events`)).json().items;
+    expect(events.at(-1)).toMatchObject({
+      type: 'tags_changed',
+      data: { added: ['vip-customer'], removed: ['refund'] },
+    });
+  });
+
   it('returns 404 for unknown tickets', async () => {
     expect((await as(ctx, agent).patch('/api/tickets/9999', { status: 'open' })).statusCode).toBe(
       404,
@@ -227,12 +242,15 @@ describe('views', () => {
 
   it('filters by status, priority, assignee and tag', async () => {
     const { a, b } = await seedQueue();
-    await as(ctx, agent).patch(`/api/tickets/${a.id}`, { priority: 'high' });
+    await as(ctx, agent).patch(`/api/tickets/${a.id}`, { priority: 'high', tags: ['billing'] });
 
     expect(subjects(await as(ctx, agent).get('/api/tickets?status=solved'))).toEqual([
       'Already solved',
     ]);
     expect(subjects(await as(ctx, agent).get('/api/tickets?priority=high'))).toEqual([
+      'Unassigned one',
+    ]);
+    expect(subjects(await as(ctx, agent).get('/api/tickets?tag=billing'))).toEqual([
       'Unassigned one',
     ]);
     expect(

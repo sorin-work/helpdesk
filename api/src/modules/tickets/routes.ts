@@ -27,6 +27,7 @@ const listQuery = z.object({
     .optional(),
   priority: z.enum(TICKET_PRIORITIES).optional(),
   assignee: z.union([z.literal('none'), z.coerce.number().int().positive()]).optional(),
+  tag: z.string().trim().toLowerCase().max(40).optional(),
   sort: z.enum(SORTS).default('updated'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
@@ -38,6 +39,7 @@ const createBody = z.object({
   subject: z.string().trim().min(3, 'Subject is too short').max(200),
   body,
   priority: z.enum(TICKET_PRIORITIES).default('normal'),
+  tags: z.array(z.string().max(40)).max(20).default([]),
 });
 
 const updateBody = z
@@ -45,6 +47,7 @@ const updateBody = z
     status: z.enum(TICKET_STATUSES),
     priority: z.enum(TICKET_PRIORITIES),
     assigneeId: z.number().int().positive().nullable(),
+    tags: z.array(z.string().max(40)).max(20),
   })
   .partial();
 

@@ -3,7 +3,9 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { Db, DbOrTx } from '../../db/client.js';
 import {
   messages,
+  tags,
   tickets,
+  ticketTags,
   users,
   type Ticket,
   type TicketPriority,
@@ -14,8 +16,15 @@ import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { canTransition, UNSOLVED_STATUSES } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
 import { getPolicy, getSchedule } from '../sla/service.js';
+import { setTicketTags, tagsForTickets } from '../tags/service.js';
 import { loadTicketFor } from './access.js';
-import { toMessageDto, toTicketSummary, type TicketDetailDto } from './dto.js';
+import {
+  toMessageDto,
+  toTicketSummary,
+  type TicketDetailDto,
+  type TicketRow,
+  type TicketSummaryDto,
+} from './dto.js';
 import { recordEvent } from './events.js';
 import { dueDateFields, statusChangeFields } from './sla-fields.js';
 
@@ -36,6 +45,14 @@ function ticketRows(db: DbOrTx) {
     .leftJoin(assignee, eq(assignee.id, tickets.assigneeId));
 }
 
+async function summarize(db: DbOrTx, rows: TicketRow[], now: Date): Promise<TicketSummaryDto[]> {
+  const tagMap = await tagsForTickets(
+    db,
+    rows.map((row) => row.ticket.id),
+  );
+  return rows.map((row) => toTicketSummary(row, tagMap.get(row.ticket.id) ?? [], now));
+}
+
 // ---------------------------------------------------------------------------
 // Views and listing
 
@@ -50,6 +67,7 @@ export interface ListTicketsInput {
   status?: TicketStatus[];
   priority?: TicketPriority;
   assigneeId?: number | 'none';
+  tag?: string;
   sort: TicketSort;
   page: number;
   pageSize: number;
@@ -119,6 +137,12 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
   if (input.priority) conditions.push(eq(tickets.priority, input.priority));
   if (input.assigneeId === 'none') conditions.push(isNull(tickets.assigneeId));
   else if (input.assigneeId) conditions.push(eq(tickets.assigneeId, input.assigneeId));
+  if (input.tag) {
+    conditions.push(
+      sql`exists (select 1 from ${ticketTags} join ${tags} on ${tags.id} = ${ticketTags.tagId}
+        where ${ticketTags.ticketId} = ${tickets.id} and ${tags.name} = ${input.tag})`,
+    );
+  }
 
   const where = and(...conditions);
   const [rows, [total]] = await Promise.all([
@@ -131,7 +155,7 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
   ]);
 
   return {
-    items: rows.map((row) => toTicketSummary(row, now)),
+    items: await summarize(db, rows, now),
     total: total?.value ?? 0,
     page: input.page,
     pageSize: input.pageSize,
@@ -165,7 +189,7 @@ export async function getTicketDetail(
   await loadTicketFor(db, viewer, id);
   const [row] = await ticketRows(db).where(eq(tickets.id, id));
   if (!row) throw notFound('Ticket');
-  const summary = toTicketSummary(row, now);
+  const [summary] = await summarize(db, [row], now);
 
   const staff = isStaff(viewer);
   const messageRows = await db
@@ -180,7 +204,7 @@ export async function getTicketDetail(
     .orderBy(asc(messages.createdAt), asc(messages.id));
 
   return {
-    ...summary,
+    ...summary!,
     messages: messageRows.map((m) => toMessageDto(m.message, m.author)),
   };
 }
@@ -192,6 +216,7 @@ export interface CreateTicketInput {
   subject: string;
   body: string;
   priority: TicketPriority;
+  tags: string[];
 }
 
 export async function createTicket(
@@ -219,6 +244,11 @@ export async function createTicket(
       .insert(messages)
       .values({ ticketId: ticket!.id, authorId: actor.id, body: input.body, createdAt: now });
     await recordEvent(tx, ticket!.id, actor.id, 'created', { priority: input.priority }, now);
+
+    if (input.tags.length && isStaff(actor)) {
+      const result = await setTicketTags(tx, ticket!.id, input.tags);
+      await recordEvent(tx, ticket!.id, actor.id, 'tags_changed', result, now);
+    }
     return ticket!;
   });
 }
@@ -230,6 +260,7 @@ export interface UpdateTicketInput {
   status?: TicketStatus;
   priority?: TicketPriority;
   assigneeId?: number | null;
+  tags?: string[];
 }
 
 export async function assertAssignable(db: DbOrTx, id: number): Promise<User> {
@@ -304,7 +335,12 @@ export async function updateTicket(
       );
     }
 
-    if (Object.keys(patch).length > 0) {
+    if (input.tags) {
+      const result = await setTicketTags(tx, id, input.tags);
+      await recordEvent(tx, id, actor.id, 'tags_changed', result, now);
+    }
+
+    if (Object.keys(patch).length > 0 || input.tags) {
       await tx
         .update(tickets)
         .set({ ...patch, updatedAt: now })

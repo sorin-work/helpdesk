@@ -9,6 +9,7 @@ export interface TicketSummaryDto {
   priority: Ticket['priority'];
   requester: { id: number; name: string; email: string };
   assignee: { id: number; name: string } | null;
+  tags: string[];
   sla: SlaSummary;
   createdAt: string;
   updatedAt: string;
@@ -42,7 +43,7 @@ export interface TicketRow {
   assignee: Pick<User, 'id' | 'name'> | null;
 }
 
-export function toTicketSummary(row: TicketRow, now: Date): TicketSummaryDto {
+export function toTicketSummary(row: TicketRow, tags: string[], now: Date): TicketSummaryDto {
   const { ticket } = row;
   return {
     id: ticket.id,
@@ -51,6 +52,7 @@ export function toTicketSummary(row: TicketRow, now: Date): TicketSummaryDto {
     priority: ticket.priority,
     requester: { id: row.requester.id, name: row.requester.name, email: row.requester.email },
     assignee: row.assignee ? { id: row.assignee.id, name: row.assignee.name } : null,
+    tags,
     sla: slaSummary(ticket, now),
     createdAt: ticket.createdAt.toISOString(),
     updatedAt: ticket.updatedAt.toISOString(),
