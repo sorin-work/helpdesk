@@ -190,6 +190,14 @@ describe('updating tickets', () => {
     ]);
   });
 
+  it('does not record a change when the tags stay the same', async () => {
+    const ticket = await openTicket(ctx, customer);
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { tags: ['billing'] });
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { tags: ['Billing'] });
+    const events = (await as(ctx, agent).get(`/api/tickets/${ticket.id}/events`)).json().items;
+    expect(events.filter((e: { type: string }) => e.type === 'tags_changed')).toHaveLength(1);
+  });
+
   it('returns 404 for unknown tickets', async () => {
     expect((await as(ctx, agent).patch('/api/tickets/9999', { status: 'open' })).statusCode).toBe(
       404,

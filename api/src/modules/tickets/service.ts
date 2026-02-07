@@ -337,7 +337,9 @@ export async function updateTicket(
 
     if (input.tags) {
       const result = await setTicketTags(tx, id, input.tags);
-      await recordEvent(tx, id, actor.id, 'tags_changed', result, now);
+      if (result.added.length || result.removed.length) {
+        await recordEvent(tx, id, actor.id, 'tags_changed', result, now);
+      }
     }
 
     if (Object.keys(patch).length > 0 || input.tags) {
