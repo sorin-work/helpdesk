@@ -5,6 +5,7 @@ import type { Db } from './db/client.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { settingsRoutes } from './modules/settings/routes.js';
+import { tagRoutes } from './modules/tags/routes.js';
 import { ticketRoutes } from './modules/tickets/routes.js';
 import { userRoutes } from './modules/users/routes.js';
 import { registerAuth } from './plugins/auth.js';
@@ -55,6 +56,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       await api.register(userRoutes);
       await api.register(ticketRoutes);
       await api.register(settingsRoutes);
+      await api.register(tagRoutes);
     },
     { prefix: '/api' },
   );

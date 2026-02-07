@@ -182,6 +182,12 @@ describe('updating tickets', () => {
       type: 'tags_changed',
       data: { added: ['vip-customer'], removed: ['refund'] },
     });
+
+    const tags = (await as(ctx, agent).get('/api/tags')).json().items;
+    expect(tags).toEqual([
+      { name: 'billing', tickets: 1, open: 1 },
+      { name: 'vip-customer', tickets: 1, open: 1 },
+    ]);
   });
 
   it('returns 404 for unknown tickets', async () => {
