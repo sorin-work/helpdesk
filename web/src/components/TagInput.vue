@@ -17,7 +17,7 @@ const draft = ref('');
 function add() {
   const tag = normalizeTag(draft.value);
   draft.value = '';
-  if (!tag) return;
+  if (!tag || props.modelValue.includes(tag)) return;
   emit('update:modelValue', [...props.modelValue, tag]);
 }
 

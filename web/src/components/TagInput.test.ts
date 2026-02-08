@@ -16,6 +16,16 @@ describe('TagInput', () => {
     expect((input.element as HTMLInputElement).value).toBe('');
   });
 
+  it('ignores duplicates and empty input', async () => {
+    const wrapper = setup(['billing']);
+    const input = wrapper.find('input');
+    await input.setValue('Billing');
+    await input.trigger('keydown', { key: 'Enter' });
+    await input.setValue('!!!');
+    await input.trigger('keydown', { key: ',' });
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+
   it('removes tags with the button or backspace', async () => {
     const wrapper = setup(['billing', 'refund']);
     await wrapper.find('button[aria-label="Remove billing"]').trigger('click');
