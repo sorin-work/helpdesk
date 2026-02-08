@@ -29,6 +29,13 @@
       "when": 1770459120000,
       "tag": "0003_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770564900000,
+      "tag": "0004_canned_responses",
+      "breakpoints": true
     }
   ]
 }
