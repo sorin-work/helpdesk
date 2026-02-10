@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { PLACEHOLDERS } from '../../lib/placeholders.js';
 import { parse } from '../../lib/validation.js';
 import { currentUser } from '../../plugins/auth.js';
 import {
@@ -23,7 +24,7 @@ export async function cannedRoutes(app: FastifyInstance) {
   const staffOnly = { preHandler: app.requireRole('agent', 'admin') };
 
   app.get('/canned-responses', staffOnly, async () => {
-    return { items: await listCannedResponses(app.db) };
+    return { items: await listCannedResponses(app.db), placeholders: PLACEHOLDERS };
   });
 
   app.post('/canned-responses', staffOnly, async (request, reply) => {

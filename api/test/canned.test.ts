@@ -42,6 +42,7 @@ describe('canned responses', () => {
         createdBy: { id: agent.id, name: 'Alex Rivera' },
       }),
     ]);
+    expect(list.placeholders.map((p: { key: string }) => p.key)).toContain('customer.first_name');
 
     expect((await as(ctx, agent).delete(`/api/canned-responses/${id}`)).statusCode).toBe(204);
     expect((await as(ctx, agent).get('/api/canned-responses')).json().items).toEqual([]);
