@@ -32,7 +32,8 @@ function toDto(
 }
 
 function isUniqueViolation(err: unknown): boolean {
-  return (err as { code?: string }).code === '23505';
+  const cause = (err as { cause?: { code?: string } }).cause;
+  return (err as { code?: string }).code === '23505' || cause?.code === '23505';
 }
 
 export async function listCannedResponses(db: DbOrTx): Promise<CannedResponseDto[]> {

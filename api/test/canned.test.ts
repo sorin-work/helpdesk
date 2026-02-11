@@ -48,6 +48,15 @@ describe('canned responses', () => {
     expect((await as(ctx, agent).get('/api/canned-responses')).json().items).toEqual([]);
   });
 
+  it('needs unique titles', async () => {
+    await as(ctx, agent).post('/api/canned-responses', { title: 'Greeting', body: 'a' });
+    const dup = await as(ctx, agent).post('/api/canned-responses', {
+      title: 'Greeting',
+      body: 'b',
+    });
+    expect(dup.statusCode).toBe(409);
+  });
+
   it('renders placeholders for a ticket', async () => {
     const { id } = (
       await as(ctx, agent).post('/api/canned-responses', {
