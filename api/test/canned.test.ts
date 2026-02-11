@@ -70,4 +70,15 @@ describe('canned responses', () => {
     });
     expect(res.json()).toEqual({ body: `Hi Casey, #${ticket.id} is with engineering. - Alex` });
   });
+
+  it('are not available to customers', async () => {
+    expect((await as(ctx, customer).get('/api/canned-responses')).statusCode).toBe(403);
+  });
+
+  it('returns 404 for unknown ids', async () => {
+    expect((await as(ctx, agent).patch('/api/canned-responses/99', { body: 'x' })).statusCode).toBe(
+      404,
+    );
+    expect((await as(ctx, agent).delete('/api/canned-responses/99')).statusCode).toBe(404);
+  });
 });
