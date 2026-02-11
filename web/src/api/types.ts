@@ -69,6 +69,19 @@ export interface Page<T> {
 
 export type ViewCounts = Record<'unassigned' | 'mine' | 'open' | 'overdue', number>;
 
+export interface CannedResponse {
+  id: number;
+  title: string;
+  body: string;
+  createdBy: { id: number; name: string } | null;
+  updatedAt: string;
+}
+
+export interface Placeholder {
+  key: string;
+  description: string;
+}
+
 export interface TagCount {
   name: string;
   tickets: number;
