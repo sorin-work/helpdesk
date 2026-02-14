@@ -32,6 +32,10 @@ export function registerErrorHandler(app: FastifyInstance): void {
     }
 
     const fastifyError = error as FastifyError;
+    if (fastifyError.code === 'FST_REQ_FILE_TOO_LARGE') {
+      const limitMb = Math.round(app.config.maxUploadBytes / 1024 / 1024);
+      return send(413, { code: 'file_too_large', message: `Files can be at most ${limitMb} MB` });
+    }
     if (fastifyError.statusCode && fastifyError.statusCode < 500) {
       return send(fastifyError.statusCode, {
         code: fastifyError.code?.toLowerCase() ?? 'bad_request',

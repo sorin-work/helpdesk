@@ -34,11 +34,13 @@ const listQuery = z.object({
 });
 
 const body = z.string().trim().min(1, 'Message cannot be empty').max(20_000);
+const attachmentIds = z.array(z.uuid()).max(10).default([]);
 
 const createBody = z.object({
   subject: z.string().trim().min(3, 'Subject is too short').max(200),
   body,
   priority: z.enum(TICKET_PRIORITIES).default('normal'),
+  attachmentIds,
   tags: z.array(z.string().max(40)).max(20).default([]),
 });
 
@@ -55,6 +57,7 @@ const messageBody = z.object({
   body,
   internal: z.boolean().default(false),
   status: z.enum(TICKET_STATUSES).optional(),
+  attachmentIds,
 });
 
 export async function ticketRoutes(app: FastifyInstance) {

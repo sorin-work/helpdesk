@@ -2,6 +2,7 @@
 **/dist
 **/coverage
 **/.env
+**/uploads
 .git
 .github
 *.md

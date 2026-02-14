@@ -7,3 +7,4 @@ export * from './sla.js';
 export * from './settings.js';
 export * from './tags.js';
 export * from './canned.js';
+export * from './attachments.js';

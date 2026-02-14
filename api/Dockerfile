@@ -16,17 +16,21 @@ COPY api api
 RUN npm run build --workspace api
 
 FROM base AS runtime
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    UPLOAD_DIR=/app/uploads
 COPY package.json package-lock.json ./
 COPY api/package.json api/
 COPY web/package.json web/
 RUN npm ci --workspace api --include-workspace-root=false --omit=dev \
-  && npm cache clean --force
+  && npm cache clean --force \
+  && mkdir -p /app/uploads \
+  && chown node:node /app/uploads
 COPY --from=build /app/api/dist api/dist
 COPY api/drizzle api/drizzle
 
 WORKDIR /app/api
 USER node
 EXPOSE 4410
+VOLUME ["/app/uploads"]
 # Applies pending migrations, then starts listening.
 CMD ["node", "dist/index.js"]

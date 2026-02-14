@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { loadConfig, type Config } from '../src/config.js';
@@ -20,6 +23,7 @@ export const DEFAULT_NOW = new Date('2026-03-04T10:00:00Z');
 
 export async function createTestContext(overrides: Partial<Config> = {}): Promise<TestContext> {
   const database = await createTestDatabase();
+  const uploadDir = await mkdtemp(path.join(tmpdir(), 'helpdesk-uploads-'));
   const config: Config = {
     ...loadConfig({
       NODE_ENV: 'test',
@@ -28,6 +32,7 @@ export async function createTestContext(overrides: Partial<Config> = {}): Promis
       BCRYPT_ROUNDS: '4',
       LOG_LEVEL: 'silent',
     }),
+    uploadDir,
     ...overrides,
   };
   let now = DEFAULT_NOW;
@@ -48,6 +53,7 @@ export async function createTestContext(overrides: Partial<Config> = {}): Promis
     async close() {
       await app.close();
       await database.close();
+      await rm(uploadDir, { recursive: true, force: true });
     },
   };
 }

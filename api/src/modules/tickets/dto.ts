@@ -1,4 +1,4 @@
-import type { Message, Ticket, TicketEvent, User } from '../../db/schema/index.js';
+import type { Attachment, Message, Ticket, TicketEvent, User } from '../../db/schema/index.js';
 import { slaSummary, type SlaSummary } from '../../lib/sla.js';
 import { toPersonDto, type PersonDto } from '../users/dto.js';
 
@@ -17,11 +17,19 @@ export interface TicketSummaryDto {
   solvedAt: string | null;
 }
 
+export interface AttachmentDto {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
 export interface MessageDto {
   id: number;
   body: string;
   internal: boolean;
   author: PersonDto;
+  attachments: AttachmentDto[];
   createdAt: string;
 }
 
@@ -61,15 +69,26 @@ export function toTicketSummary(row: TicketRow, tags: string[], now: Date): Tick
   };
 }
 
+export function toAttachmentDto(attachment: Attachment): AttachmentDto {
+  return {
+    id: attachment.id,
+    filename: attachment.filename,
+    contentType: attachment.contentType,
+    size: attachment.size,
+  };
+}
+
 export function toMessageDto(
   message: Message,
   author: Pick<User, 'id' | 'name' | 'role'>,
+  attachments: Attachment[],
 ): MessageDto {
   return {
     id: message.id,
     body: message.body,
     internal: message.internal,
     author: toPersonDto(author),
+    attachments: attachments.map(toAttachmentDto),
     createdAt: message.createdAt.toISOString(),
   };
 }

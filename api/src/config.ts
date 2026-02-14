@@ -13,6 +13,15 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   SESSION_DAYS: z.coerce.number().int().positive().default(7),
   COOKIE_SECURE: booleanString.default(false),
+  UPLOAD_DIR: z.string().default('./uploads'),
+  MAX_UPLOAD_MB: z.coerce.number().int().positive().max(100).default(10),
+  ALLOWED_UPLOAD_TYPES: z
+    .string()
+    .default(
+      'image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,application/zip,' +
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document,' +
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
 });
 
@@ -27,6 +36,9 @@ export interface Config {
   jwtSecret: string;
   sessionDays: number;
   cookieSecure: boolean;
+  uploadDir: string;
+  maxUploadBytes: number;
+  allowedUploadTypes: string[];
   bcryptRounds: number;
 }
 
@@ -48,6 +60,11 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     jwtSecret: env.JWT_SECRET,
     sessionDays: env.SESSION_DAYS,
     cookieSecure: env.COOKIE_SECURE,
+    uploadDir: env.UPLOAD_DIR,
+    maxUploadBytes: env.MAX_UPLOAD_MB * 1024 * 1024,
+    allowedUploadTypes: env.ALLOWED_UPLOAD_TYPES.split(',')
+      .map((type) => type.trim())
+      .filter(Boolean),
     bcryptRounds: env.BCRYPT_ROUNDS,
   };
 }

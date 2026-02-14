@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
+import { attachmentRoutes } from './modules/attachments/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { cannedRoutes } from './modules/canned/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
@@ -59,6 +60,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       await api.register(settingsRoutes);
       await api.register(tagRoutes);
       await api.register(cannedRoutes);
+      await api.register(attachmentRoutes);
     },
     { prefix: '/api' },
   );

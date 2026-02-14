@@ -11,6 +11,7 @@ import {
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { canTransition } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
+import { linkAttachments } from '../attachments/service.js';
 import { recordEvent } from './events.js';
 import { statusChangeFields } from './sla-fields.js';
 
@@ -19,6 +20,7 @@ export interface AddMessageInput {
   internal: boolean;
   /** Staff can set the status in the same step, e.g. "reply and set pending". */
   status?: TicketStatus;
+  attachmentIds: string[];
 }
 
 /** Customer replies wake up tickets that were waiting on them or already solved. */
@@ -62,6 +64,7 @@ export async function addMessage(
         createdAt: now,
       })
       .returning();
+    await linkAttachments(tx, author.id, input.attachmentIds, ticketId, message!.id);
 
     const patch: Partial<Ticket> = { updatedAt: now };
     if (!input.internal) patch.lastMessageAt = now;

@@ -15,6 +15,7 @@ import {
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { canTransition, UNSOLVED_STATUSES } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
+import { attachmentsForMessages, linkAttachments } from '../attachments/service.js';
 import { getPolicy, getSchedule } from '../sla/service.js';
 import { setTicketTags, tagsForTickets } from '../tags/service.js';
 import { loadTicketFor } from './access.js';
@@ -202,10 +203,16 @@ export async function getTicketDetail(
         : and(eq(messages.ticketId, id), eq(messages.internal, false)),
     )
     .orderBy(asc(messages.createdAt), asc(messages.id));
+  const files = await attachmentsForMessages(
+    db,
+    messageRows.map((m) => m.message.id),
+  );
 
   return {
     ...summary!,
-    messages: messageRows.map((m) => toMessageDto(m.message, m.author)),
+    messages: messageRows.map((m) =>
+      toMessageDto(m.message, m.author, files.get(m.message.id) ?? []),
+    ),
   };
 }
 
@@ -216,6 +223,7 @@ export interface CreateTicketInput {
   subject: string;
   body: string;
   priority: TicketPriority;
+  attachmentIds: string[];
   tags: string[];
 }
 
@@ -240,9 +248,11 @@ export async function createTicket(
       })
       .returning();
 
-    await tx
+    const [message] = await tx
       .insert(messages)
-      .values({ ticketId: ticket!.id, authorId: actor.id, body: input.body, createdAt: now });
+      .values({ ticketId: ticket!.id, authorId: actor.id, body: input.body, createdAt: now })
+      .returning();
+    await linkAttachments(tx, actor.id, input.attachmentIds, ticket!.id, message!.id);
     await recordEvent(tx, ticket!.id, actor.id, 'created', { priority: input.priority }, now);
 
     if (input.tags.length && isStaff(actor)) {

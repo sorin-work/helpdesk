@@ -10,14 +10,18 @@ describe('loadConfig', () => {
   it('applies defaults', () => {
     const config = loadConfig(required);
     expect(config.port).toBe(4410);
+    expect(config.maxUploadBytes).toBe(10 * 1024 * 1024);
+    expect(config.allowedUploadTypes).toContain('application/pdf');
   });
 
   it('parses booleans and lists', () => {
     const config = loadConfig({
       ...required,
       COOKIE_SECURE: '1',
+      ALLOWED_UPLOAD_TYPES: 'image/png, text/plain ,',
     });
     expect(config.cookieSecure).toBe(true);
+    expect(config.allowedUploadTypes).toEqual(['image/png', 'text/plain']);
   });
 
   it('explains what is wrong', () => {
