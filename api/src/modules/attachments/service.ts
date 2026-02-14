@@ -5,6 +5,8 @@ import { badRequest, notFound } from '../../lib/errors.js';
 import { isStaff } from '../../plugins/auth.js';
 import { loadTicketFor } from '../tickets/access.js';
 
+export const MAX_ATTACHMENTS_PER_MESSAGE = 10;
+
 /** Drops control characters from an uploaded file name. */
 export function sanitizeFilename(name: string): string {
   // eslint-disable-next-line no-control-regex
@@ -22,6 +24,9 @@ export async function linkAttachments(
 ): Promise<Attachment[]> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return [];
+  if (unique.length > MAX_ATTACHMENTS_PER_MESSAGE) {
+    throw badRequest(`At most ${MAX_ATTACHMENTS_PER_MESSAGE} attachments per message`);
+  }
   const linked = await db
     .update(attachments)
     .set({ ticketId, messageId })
