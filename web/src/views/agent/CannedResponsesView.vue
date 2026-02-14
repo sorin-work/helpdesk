@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { api, ApiError, errorMessage } from '../../api/client';
-import type { CannedResponse } from '../../api/types';
+import type { CannedResponse, Placeholder } from '../../api/types';
 import { useToastStore } from '../../stores/toasts';
 
 const toasts = useToastStore();
 const items = ref<CannedResponse[]>([]);
+const placeholders = ref<Placeholder[]>([]);
 const editing = ref<CannedResponse | null>(null);
 const title = ref('');
 const body = ref('');
 const error = ref('');
+const textarea = ref<HTMLTextAreaElement>();
 
 async function load() {
-  items.value = (await api.get<{ items: CannedResponse[] }>('/canned-responses')).items;
+  const res = await api.get<{ items: CannedResponse[]; placeholders: Placeholder[] }>(
+    '/canned-responses',
+  );
+  items.value = res.items;
+  placeholders.value = res.placeholders;
 }
 
 function startNew() {
@@ -27,6 +33,12 @@ function edit(item: CannedResponse) {
   title.value = item.title;
   body.value = item.body;
   error.value = '';
+}
+
+function insert(key: string) {
+  const el = textarea.value;
+  const at = el?.selectionStart ?? body.value.length;
+  body.value = `${body.value.slice(0, at)}{{${key}}}${body.value.slice(at)}`;
 }
 
 async function save() {
@@ -98,7 +110,22 @@ onMounted(load);
           </div>
           <div class="field">
             <label for="body">Text</label>
-            <textarea id="body" v-model="body" rows="10" required />
+            <textarea id="body" ref="textarea" v-model="body" rows="10" required />
+          </div>
+          <div class="field">
+            <span class="faint">Insert a placeholder:</span>
+            <div class="row placeholders">
+              <button
+                v-for="p in placeholders"
+                :key="p.key"
+                type="button"
+                class="btn btn-small"
+                :title="p.description"
+                @click="insert(p.key)"
+              >
+                {{ p.key }}
+              </button>
+            </div>
           </div>
           <div class="field row">
             <span class="spacer" />
