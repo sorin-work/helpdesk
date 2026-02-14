@@ -1,7 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { ReplyPayload } from '../api/types';
+import { mockFetch } from '../test/fetch';
 import ReplyComposer from './ReplyComposer.vue';
+
+const canned = [
+  { id: 7, title: 'Greeting', body: 'Hi {{customer.first_name}}', createdBy: null, updatedAt: '' },
+];
 
 function setup(props: Record<string, unknown> = {}) {
   const send = vi.fn<(payload: ReplyPayload) => Promise<void>>().mockResolvedValue();
@@ -51,6 +56,17 @@ describe('ReplyComposer', () => {
     await wrapper.find('form').trigger('submit');
     await flushPromises();
     expect(send.mock.calls[0]![0]).toMatchObject({ status: 'solved' });
+  });
+
+  it('inserts a rendered canned response', async () => {
+    const fetch = mockFetch({
+      'POST /api/canned-responses/7/render': { body: { body: 'Hi Casey' } },
+    });
+    const { wrapper } = setup({ staff: true, canned });
+    await wrapper.find('select[aria-label="Insert canned response"]').setValue('7');
+    await flushPromises();
+    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('Hi Casey');
+    expect(fetch.mock.calls[0]![1]!.body).toBe('{"ticketId":1001}');
   });
 
   it('keeps the text and shows the error when sending fails', async () => {

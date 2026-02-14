@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { errorMessage } from '../api/client';
-import type { ReplyPayload, TicketStatus } from '../api/types';
+import { api, errorMessage } from '../api/client';
+import type { CannedResponse, ReplyPayload, TicketStatus } from '../api/types';
 import { STATUS_LABELS } from '../utils/format';
 import { TRANSITIONS } from '../utils/status';
 
@@ -9,11 +9,12 @@ const props = withDefaults(
   defineProps<{
     ticketId: number;
     status: TicketStatus;
-    /** Agents get internal notes and a status picker. */
+    /** Agents get internal notes, canned responses and a status picker. */
     staff?: boolean;
+    canned?: CannedResponse[];
     send: (payload: ReplyPayload) => Promise<void>;
   }>(),
-  { staff: false },
+  { staff: false, canned: () => [] },
 );
 
 const mode = ref<'reply' | 'note'>('reply');
@@ -21,12 +22,30 @@ const body = ref('');
 const nextStatus = ref<TicketStatus | ''>('');
 const busy = ref(false);
 const error = ref('');
+const textarea = ref<HTMLTextAreaElement>();
 
 const internal = computed(() => props.staff && mode.value === 'note');
 const statusChoices = computed(() => TRANSITIONS[props.status]);
 const placeholder = computed(() =>
   internal.value ? 'Only your team can see internal notes' : 'Write your reply…',
 );
+
+async function insertCanned(event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const id = Number(select.value);
+  select.value = '';
+  if (!id) return;
+  try {
+    const { body: text } = await api.post<{ body: string }>(`/canned-responses/${id}/render`, {
+      ticketId: props.ticketId,
+    });
+    const el = textarea.value;
+    const at = el?.selectionStart ?? body.value.length;
+    body.value = body.value.slice(0, at) + text + body.value.slice(at);
+  } catch (err) {
+    error.value = errorMessage(err);
+  }
+}
 
 async function submit() {
   if (!body.value.trim() || busy.value) return;
@@ -76,11 +95,22 @@ function onKeydown(event: KeyboardEvent) {
       >
         Internal note
       </button>
+      <span class="spacer" />
+      <select
+        v-if="canned.length"
+        class="inline canned"
+        aria-label="Insert canned response"
+        @change="insertCanned"
+      >
+        <option value="">Insert canned response…</option>
+        <option v-for="c in canned" :key="c.id" :value="c.id">{{ c.title }}</option>
+      </select>
     </div>
 
     <div class="card-body">
       <div v-if="error" class="alert alert-error">{{ error }}</div>
       <textarea
+        ref="textarea"
         v-model="body"
         :placeholder="placeholder"
         aria-label="Message"

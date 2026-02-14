@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { api, errorMessage } from '../../api/client';
 import type {
+  CannedResponse,
   ReplyPayload,
   TagCount,
   TicketDetail,
@@ -28,6 +29,7 @@ const toasts = useToastStore();
 const ticket = ref<TicketDetail | null>(null);
 const events = ref<TicketEvent[]>([]);
 const agents = ref<User[]>([]);
+const canned = ref<CannedResponse[]>([]);
 const tagSuggestions = ref<string[]>([]);
 const tags = ref<string[]>([]);
 const error = ref('');
@@ -80,11 +82,13 @@ watch(tags, (next) => {
 
 onMounted(async () => {
   await load();
-  const [team, tagList] = await Promise.all([
+  const [team, cannedList, tagList] = await Promise.all([
     api.get<{ items: User[] }>('/agents'),
+    api.get<{ items: CannedResponse[] }>('/canned-responses'),
     api.get<{ items: TagCount[] }>('/tags'),
   ]);
   agents.value = team.items;
+  canned.value = cannedList.items;
   tagSuggestions.value = tagList.items.map((t) => t.name);
 });
 
@@ -115,6 +119,7 @@ const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
           class="composer-gap"
           :ticket-id="ticket.id"
           :status="ticket.status"
+          :canned="canned"
           :send="send"
           staff
         />
