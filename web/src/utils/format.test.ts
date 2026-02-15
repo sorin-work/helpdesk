@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, formatRelative, initials } from './format';
+import { formatDuration, formatFileSize, formatRelative, initials } from './format';
 
 describe('formatDuration', () => {
   it.each([
@@ -33,6 +33,13 @@ describe('formatRelative', () => {
 });
 
 describe('small formatters', () => {
+  it('formats file sizes', () => {
+    expect(formatFileSize(512)).toBe('512 B');
+    expect(formatFileSize(2048)).toBe('2.0 KB');
+    expect(formatFileSize(300 * 1024)).toBe('300 KB');
+    expect(formatFileSize(5.5 * 1024 * 1024)).toBe('5.5 MB');
+  });
+
   it('builds initials from up to two names', () => {
     expect(initials('Alex Rivera')).toBe('AR');
     expect(initials('maria del carmen')).toBe('MD');

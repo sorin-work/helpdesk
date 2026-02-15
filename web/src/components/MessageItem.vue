@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Message } from '../api/types';
 import { formatDateTime, initials } from '../utils/format';
+import AttachmentList from './AttachmentList.vue';
 
 defineProps<{ message: Message }>();
 </script>
@@ -20,6 +21,7 @@ defineProps<{ message: Message }>();
         }}</time>
       </header>
       <div class="body">{{ message.body }}</div>
+      <AttachmentList :attachments="message.attachments" />
     </div>
   </article>
 </template>

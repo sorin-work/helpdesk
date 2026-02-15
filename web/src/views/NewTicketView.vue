@@ -2,7 +2,8 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { api, ApiError, errorMessage } from '../api/client';
-import type { TicketDetail, TicketPriority } from '../api/types';
+import type { Attachment, TicketDetail, TicketPriority } from '../api/types';
+import FilePicker from '../components/FilePicker.vue';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toasts';
 import { PRIORITY_LABELS } from '../utils/format';
@@ -14,6 +15,7 @@ const toasts = useToastStore();
 const subject = ref('');
 const body = ref('');
 const priority = ref<TicketPriority>('normal');
+const files = ref<Attachment[]>([]);
 const busy = ref(false);
 const error = ref('');
 const fieldErrors = ref<Record<string, string>>({});
@@ -29,6 +31,7 @@ async function submit() {
       subject: subject.value,
       body: body.value,
       priority: priority.value,
+      attachmentIds: files.value.map((f) => f.id),
     });
     toasts.success(`Ticket #${ticket.id} created`);
     await router.push(`/portal/tickets/${ticket.id}`);
@@ -82,6 +85,10 @@ async function submit() {
               <option v-for="p in priorities" :key="p" :value="p">{{ PRIORITY_LABELS[p] }}</option>
             </select>
           </div>
+        </div>
+
+        <div class="field">
+          <FilePicker v-model="files" />
         </div>
 
         <div class="field row">

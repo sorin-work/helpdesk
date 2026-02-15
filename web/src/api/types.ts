@@ -40,11 +40,19 @@ export interface TicketSummary {
   solvedAt: string | null;
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
 export interface Message {
   id: number;
   body: string;
   internal: boolean;
   author: { id: number; name: string; role: Role };
+  attachments: Attachment[];
   createdAt: string;
 }
 
@@ -92,4 +100,5 @@ export interface ReplyPayload {
   body: string;
   internal: boolean;
   status?: TicketStatus;
+  attachmentIds: string[];
 }

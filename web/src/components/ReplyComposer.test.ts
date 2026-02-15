@@ -25,6 +25,7 @@ describe('ReplyComposer', () => {
     expect(send).toHaveBeenCalledWith({
       body: 'Thanks for waiting!',
       internal: false,
+      attachmentIds: [],
     });
     expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('');
   });

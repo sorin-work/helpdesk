@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { api, errorMessage } from '../api/client';
-import type { CannedResponse, ReplyPayload, TicketStatus } from '../api/types';
+import type { Attachment, CannedResponse, ReplyPayload, TicketStatus } from '../api/types';
 import { STATUS_LABELS } from '../utils/format';
 import { TRANSITIONS } from '../utils/status';
+import FilePicker from './FilePicker.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -19,6 +20,7 @@ const props = withDefaults(
 
 const mode = ref<'reply' | 'note'>('reply');
 const body = ref('');
+const files = ref<Attachment[]>([]);
 const nextStatus = ref<TicketStatus | ''>('');
 const busy = ref(false);
 const error = ref('');
@@ -56,8 +58,10 @@ async function submit() {
       body: body.value,
       internal: internal.value,
       ...(nextStatus.value && { status: nextStatus.value }),
+      attachmentIds: files.value.map((f) => f.id),
     });
     body.value = '';
+    files.value = [];
     nextStatus.value = '';
   } catch (err) {
     error.value = errorMessage(err);
@@ -118,6 +122,7 @@ function onKeydown(event: KeyboardEvent) {
         @keydown="onKeydown"
       />
       <div class="actions">
+        <FilePicker v-model="files" />
         <span class="spacer" />
         <select v-if="staff" v-model="nextStatus" class="inline" aria-label="Status after sending">
           <option value="">Keep status ({{ STATUS_LABELS[status] }})</option>
