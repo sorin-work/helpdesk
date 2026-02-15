@@ -125,4 +125,11 @@ describe('attaching and downloading', () => {
     expect((await as(ctx, customer).get(`/api/attachments/${file.id}`)).statusCode).toBe(404);
     expect((await as(ctx, agent).get(`/api/attachments/${file.id}`)).statusCode).toBe(200);
   });
+
+  it('serves images inline', async () => {
+    const file = (await upload(customer, 'shot.png', 'image/png', 'png')).json();
+    const res = await as(ctx, customer).get(`/api/attachments/${file.id}`);
+    expect(res.headers['content-disposition']).toMatch(/^inline/);
+    expect(res.headers['content-type']).toBe('image/png');
+  });
 });

@@ -61,11 +61,15 @@ export async function attachmentRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const id = parse(z.uuid(), request.params.id);
       const attachment = await getAttachmentFor(app.db, currentUser(request), id);
+      const inline = attachment.contentType.startsWith('image/');
       const encoded = encodeURIComponent(attachment.filename);
       return reply
         .header('content-type', attachment.contentType)
         .header('content-length', attachment.size)
-        .header('content-disposition', `attachment; filename*=UTF-8''${encoded}`)
+        .header(
+          'content-disposition',
+          `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encoded}`,
+        )
         .send(storage.open(attachment.storageKey));
     },
   );
