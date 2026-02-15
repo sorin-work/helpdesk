@@ -1,3 +1,5 @@
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   as,
@@ -23,6 +25,15 @@ beforeEach(async () => {
   other = await createSignedInUser(ctx, 'customer', 'Jordan Lee');
   agent = await createSignedInUser(ctx, 'agent', 'Alex Rivera');
 });
+
+async function countFiles(dir: string): Promise<number> {
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  let total = 0;
+  for (const entry of entries) {
+    total += entry.isDirectory() ? await countFiles(path.join(dir, entry.name)) : 1;
+  }
+  return total;
+}
 
 /** Builds a multipart body by hand; inject has no FormData support. */
 function upload(user: TestUser, filename: string, contentType: string, content: string | Buffer) {
@@ -60,10 +71,12 @@ describe('uploading', () => {
     expect(res.json().error.code).toBe('unsupported_file_type');
   });
 
-  it('rejects files over the size limit', async () => {
+  it('rejects files over the size limit and keeps nothing on disk', async () => {
+    const before = await countFiles(ctx.config.uploadDir);
     const res = await upload(customer, 'big.txt', 'text/plain', Buffer.alloc(2048, 'a'));
     expect(res.statusCode).toBe(413);
     expect(res.json().error.code).toBe('file_too_large');
+    expect(await countFiles(ctx.config.uploadDir)).toBe(before);
   });
 
   it('strips directories from the filename', async () => {

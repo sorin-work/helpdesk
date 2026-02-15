@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, rm, stat } from 'node:fs/promises';
+import { once } from 'node:events';
 import path from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -26,9 +27,12 @@ export class LocalStorage {
     const key = `${dir}/${randomUUID()}`;
     const full = this.resolve(key);
     await mkdir(path.dirname(full), { recursive: true });
+    const out = createWriteStream(full, { flags: 'wx' });
     try {
-      await pipeline(source, createWriteStream(full, { flags: 'wx' }));
+      await pipeline(source, out);
     } catch (err) {
+      // Wait for the file handle to close, or the file can reappear after rm.
+      if (!out.closed) await once(out, 'close');
       await rm(full, { force: true });
       throw err;
     }
