@@ -79,9 +79,19 @@ describe('uploading', () => {
     expect(await countFiles(ctx.config.uploadDir)).toBe(before);
   });
 
+  it('rejects empty files', async () => {
+    const res = await upload(customer, 'empty.txt', 'text/plain', '');
+    expect(res.statusCode).toBe(400);
+  });
+
   it('strips directories from the filename', async () => {
     const res = await upload(customer, '../../etc/passwd.txt', 'text/plain', 'root');
     expect(res.json().filename).toBe('passwd.txt');
+  });
+
+  it('requires a session', async () => {
+    const res = await ctx.app.inject({ method: 'POST', url: '/api/attachments' });
+    expect(res.statusCode).toBe(401);
   });
 });
 
@@ -109,6 +119,16 @@ describe('attaching and downloading', () => {
     const res = await as(ctx, other).post('/api/tickets', {
       subject: 'Stolen file',
       body: 'Look',
+      attachmentIds: [file.id],
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('cannot attach the same upload twice', async () => {
+    const file = (await upload(customer, 'log.txt', 'text/plain', 'once')).json();
+    const ticket = await openTicket(ctx, customer, { attachmentIds: [file.id] });
+    const res = await as(ctx, customer).post(`/api/tickets/${ticket.id}/messages`, {
+      body: 'again',
       attachmentIds: [file.id],
     });
     expect(res.statusCode).toBe(400);
