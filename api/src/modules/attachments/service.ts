@@ -7,10 +7,11 @@ import { loadTicketFor } from '../tickets/access.js';
 
 export const MAX_ATTACHMENTS_PER_MESSAGE = 10;
 
-/** Drops control characters from an uploaded file name. */
+/** Keeps the last path segment and drops control characters. */
 export function sanitizeFilename(name: string): string {
+  const base = name.split(/[\\/]/).pop() ?? '';
   // eslint-disable-next-line no-control-regex
-  const cleaned = name.replace(/[\u0000-\u001f\u007f"]/g, '').trim();
+  const cleaned = base.replace(/[\u0000-\u001f\u007f"]/g, '').trim();
   return (cleaned || 'file').slice(0, 200);
 }
 

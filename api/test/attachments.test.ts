@@ -65,6 +65,11 @@ describe('uploading', () => {
     expect(res.statusCode).toBe(413);
     expect(res.json().error.code).toBe('file_too_large');
   });
+
+  it('strips directories from the filename', async () => {
+    const res = await upload(customer, '../../etc/passwd.txt', 'text/plain', 'root');
+    expect(res.json().filename).toBe('passwd.txt');
+  });
 });
 
 describe('attaching and downloading', () => {
