@@ -66,6 +66,7 @@ export async function attachmentRoutes(app: FastifyInstance) {
       return reply
         .header('content-type', attachment.contentType)
         .header('content-length', attachment.size)
+        .header('x-content-type-options', 'nosniff')
         .header(
           'content-disposition',
           `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encoded}`,

@@ -107,6 +107,7 @@ describe('attaching and downloading', () => {
     expect(download.statusCode).toBe(200);
     expect(download.body).toBe('error at line 3');
     expect(download.headers['content-disposition']).toBe("attachment; filename*=UTF-8''log.txt");
+    expect(download.headers['x-content-type-options']).toBe('nosniff');
 
     expect((await as(ctx, other).get(`/api/attachments/${file.id}`)).statusCode).toBe(404);
   });
