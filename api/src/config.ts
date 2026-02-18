@@ -14,7 +14,7 @@ const envSchema = z.object({
   SESSION_DAYS: z.coerce.number().int().positive().default(7),
   COOKIE_SECURE: booleanString.default(false),
   UPLOAD_DIR: z.string().default('./uploads'),
-  MAX_UPLOAD_MB: z.coerce.number().int().positive().max(100).default(10),
+  MAX_UPLOAD_MB: z.coerce.number().positive().max(100).default(10),
   ALLOWED_UPLOAD_TYPES: z
     .string()
     .default(
@@ -61,7 +61,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     sessionDays: env.SESSION_DAYS,
     cookieSecure: env.COOKIE_SECURE,
     uploadDir: env.UPLOAD_DIR,
-    maxUploadBytes: env.MAX_UPLOAD_MB * 1024 * 1024,
+    maxUploadBytes: Math.round(env.MAX_UPLOAD_MB * 1024 * 1024),
     allowedUploadTypes: env.ALLOWED_UPLOAD_TYPES.split(',')
       .map((type) => type.trim())
       .filter(Boolean),

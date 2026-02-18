@@ -19,9 +19,11 @@ describe('loadConfig', () => {
       ...required,
       COOKIE_SECURE: '1',
       ALLOWED_UPLOAD_TYPES: 'image/png, text/plain ,',
+      MAX_UPLOAD_MB: '2.5',
     });
     expect(config.cookieSecure).toBe(true);
     expect(config.allowedUploadTypes).toEqual(['image/png', 'text/plain']);
+    expect(config.maxUploadBytes).toBe(2_621_440);
   });
 
   it('explains what is wrong', () => {
