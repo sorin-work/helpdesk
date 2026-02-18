@@ -23,6 +23,7 @@ async function onChange(event: Event) {
       uploading.value--;
     }
   }
+  if (input.value) input.value.value = '';
 }
 
 function remove(id: string) {
