@@ -65,6 +65,7 @@ async function save() {
 }
 
 async function remove(item: CannedResponse) {
+  if (!window.confirm(`Delete "${item.title}"?`)) return;
   try {
     await api.delete(`/canned-responses/${item.id}`);
     if (editing.value?.id === item.id) editing.value = null;
