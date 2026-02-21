@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { api, ApiError, errorMessage } from '../../api/client';
 import type { CannedResponse, Placeholder } from '../../api/types';
 import { useToastStore } from '../../stores/toasts';
@@ -10,8 +10,17 @@ const placeholders = ref<Placeholder[]>([]);
 const editing = ref<CannedResponse | null>(null);
 const title = ref('');
 const body = ref('');
+const filter = ref('');
 const error = ref('');
 const textarea = ref<HTMLTextAreaElement>();
+
+const visible = computed(() => {
+  const q = filter.value.trim().toLowerCase();
+  if (!q) return items.value;
+  return items.value.filter(
+    (c) => c.title.toLowerCase().includes(q) || c.body.toLowerCase().includes(q),
+  );
+});
 
 async function load() {
   const res = await api.get<{ items: CannedResponse[]; placeholders: Placeholder[] }>(
@@ -87,8 +96,11 @@ onMounted(load);
 
     <div class="layout">
       <div class="card">
+        <div class="card-body">
+          <input v-model="filter" type="search" placeholder="Filter" aria-label="Filter" />
+        </div>
         <ul class="list">
-          <li v-for="item in items" :key="item.id" :class="{ active: editing?.id === item.id }">
+          <li v-for="item in visible" :key="item.id" :class="{ active: editing?.id === item.id }">
             <button type="button" class="item" @click="edit(item)">
               <strong>{{ item.title }}</strong>
               <span class="faint preview">{{ item.body }}</span>
@@ -97,7 +109,7 @@ onMounted(load);
               Delete
             </button>
           </li>
-          <li v-if="items.length === 0" class="empty">No canned responses yet.</li>
+          <li v-if="visible.length === 0" class="empty">No canned responses yet.</li>
         </ul>
       </div>
 
