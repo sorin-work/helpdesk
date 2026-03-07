@@ -160,6 +160,12 @@ describe('updating tickets', () => {
       assigneeId: customer.id,
     });
     expect(res.statusCode).toBe(400);
+
+    await as(ctx, admin).patch(`/api/users/${agent.id}`, { active: false });
+    const inactive = await as(ctx, admin).patch(`/api/tickets/${ticket.id}`, {
+      assigneeId: agent.id,
+    });
+    expect(inactive.statusCode).toBe(400);
   });
 
   it('unassigns with null', async () => {

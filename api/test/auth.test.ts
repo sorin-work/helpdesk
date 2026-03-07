@@ -103,6 +103,21 @@ describe('POST /api/auth/login', () => {
     expect(unknown.statusCode).toBe(401);
     expect(wrong.json().error.message).toBe(unknown.json().error.message);
   });
+
+  it('refuses deactivated users', async () => {
+    const admin = await createSignedInUser(ctx, 'admin');
+    const agent = await createSignedInUser(ctx, 'agent', 'Gone Agent');
+    await as(ctx, admin).patch(`/api/users/${agent.id}`, { active: false });
+
+    const login = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: agent.email, password: 'password123' },
+    });
+    expect(login.statusCode).toBe(401);
+    // Existing sessions stop working straight away too.
+    expect((await as(ctx, agent).get('/api/auth/me')).statusCode).toBe(401);
+  });
 });
 
 describe('session', () => {

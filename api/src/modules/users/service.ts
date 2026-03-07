@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import type { DbOrTx } from '../../db/client.js';
 import { users, type Role, type User } from '../../db/schema/index.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
@@ -68,6 +68,27 @@ export async function changePassword(
   await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, user.id));
 }
 
+export interface ListUsersFilter {
+  role?: Role;
+  q?: string;
+}
+
+export async function listUsers(db: DbOrTx, filter: ListUsersFilter): Promise<User[]> {
+  const conditions: SQL[] = [];
+  if (filter.role) conditions.push(eq(users.role, filter.role));
+  conditions.push(eq(users.active, true));
+  if (filter.q) {
+    const pattern = `%${filter.q.replace(/[%_\\]/g, '\\$&')}%`;
+    conditions.push(or(ilike(users.name, pattern), ilike(users.email, pattern))!);
+  }
+  return db
+    .select()
+    .from(users)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(asc(users.name))
+    .limit(200);
+}
+
 /** Active agents and admins: everyone who can be assigned a ticket. */
 export async function listStaff(db: DbOrTx): Promise<User[]> {
   return db
@@ -79,6 +100,8 @@ export async function listStaff(db: DbOrTx): Promise<User[]> {
 
 export interface UpdateUserInput {
   name?: string;
+  role?: Role;
+  active?: boolean;
 }
 
 export async function updateUser(
@@ -88,10 +111,18 @@ export async function updateUser(
   input: UpdateUserInput,
 ): Promise<User> {
   const target = await getUser(db, id);
+  if (target.id === actor.id) {
+    if (input.role && input.role !== actor.role) {
+      throw badRequest('You cannot change your own role');
+    }
+    if (input.active === false) throw badRequest('You cannot deactivate yourself');
+  }
   const [updated] = await db
     .update(users)
     .set({
       ...(input.name !== undefined && { name: input.name.trim() }),
+      ...(input.role !== undefined && { role: input.role }),
+      ...(input.active !== undefined && { active: input.active }),
       updatedAt: new Date(),
     })
     .where(eq(users.id, target.id))
