@@ -9,6 +9,10 @@ import { createUser, listStaff, listUsers, updateUser } from './service.js';
 const listQuery = z.object({
   role: z.enum(ROLES).optional(),
   q: z.string().trim().max(100).optional(),
+  includeInactive: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
 });
 
 const createBody = z.object({

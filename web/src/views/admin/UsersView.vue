@@ -12,6 +12,7 @@ const toasts = useToastStore();
 const users = ref<User[]>([]);
 const role = ref<Role | ''>('');
 const q = ref('');
+const includeInactive = ref(false);
 const showInvite = ref(false);
 const invite = reactive({ name: '', email: '', password: '', role: 'agent' as Role });
 const inviteErrors = ref<Record<string, string>>({});
@@ -23,6 +24,7 @@ async function load() {
     await api.get<{ items: User[] }>('/users', {
       role: role.value,
       q: q.value.trim(),
+      includeInactive: includeInactive.value || undefined,
     })
   ).items;
 }
@@ -32,7 +34,7 @@ watch(q, () => {
   clearTimeout(debounce);
   debounce = setTimeout(load, 250);
 });
-watch(role, load);
+watch([role, includeInactive], load);
 onMounted(load);
 
 async function change(user: User, changes: Partial<Pick<User, 'role' | 'active'>>) {
@@ -127,6 +129,9 @@ async function submitInvite() {
         <option value="agent">Agents</option>
         <option value="customer">Customers</option>
       </select>
+      <label class="checkbox">
+        <input v-model="includeInactive" type="checkbox" /> Show deactivated
+      </label>
     </div>
 
     <div class="card">

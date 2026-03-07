@@ -63,6 +63,8 @@ describe('user management', () => {
     expect(deactivated.json().active).toBe(false);
     const active = (await as(ctx, admin).get('/api/users')).json().items;
     expect(active.map((u: { name: string }) => u.name)).toEqual(['Dana Admin']);
+    const everyone = (await as(ctx, admin).get('/api/users?includeInactive=true')).json().items;
+    expect(everyone).toHaveLength(2);
   });
 
   it('is admin only', async () => {

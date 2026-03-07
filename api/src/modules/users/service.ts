@@ -71,12 +71,13 @@ export async function changePassword(
 export interface ListUsersFilter {
   role?: Role;
   q?: string;
+  includeInactive?: boolean;
 }
 
 export async function listUsers(db: DbOrTx, filter: ListUsersFilter): Promise<User[]> {
   const conditions: SQL[] = [];
   if (filter.role) conditions.push(eq(users.role, filter.role));
-  conditions.push(eq(users.active, true));
+  if (!filter.includeInactive) conditions.push(eq(users.active, true));
   if (filter.q) {
     const pattern = `%${filter.q.replace(/[%_\\]/g, '\\$&')}%`;
     conditions.push(or(ilike(users.name, pattern), ilike(users.email, pattern))!);
