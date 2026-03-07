@@ -21,6 +21,9 @@ async function logout() {
     <nav v-if="auth.isStaff" class="nav">
       <RouterLink to="/queue/mine" :class="{ active: $route.name === 'queue' }">Tickets</RouterLink>
       <RouterLink to="/canned-responses">Canned responses</RouterLink>
+      <template v-if="auth.isAdmin">
+        <RouterLink to="/admin/users">People</RouterLink>
+      </template>
     </nav>
     <nav v-else class="nav">
       <RouterLink to="/portal">My requests</RouterLink>
