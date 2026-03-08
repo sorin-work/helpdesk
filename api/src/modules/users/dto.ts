@@ -6,6 +6,7 @@ export interface UserDto {
   name: string;
   role: User['role'];
   active: boolean;
+  available: boolean;
   createdAt: string;
 }
 
@@ -16,6 +17,7 @@ export function toUserDto(user: User): UserDto {
     name: user.name,
     role: user.role,
     active: user.active,
+    available: user.available,
     createdAt: user.createdAt.toISOString(),
   };
 }

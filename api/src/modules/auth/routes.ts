@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { unauthorized } from '../../lib/errors.js';
+import { badRequest, unauthorized } from '../../lib/errors.js';
 import { parse } from '../../lib/validation.js';
-import { currentUser, endSession, startSession } from '../../plugins/auth.js';
+import { currentUser, endSession, isStaff, startSession } from '../../plugins/auth.js';
 import { toUserDto } from '../users/dto.js';
 import {
   changePassword,
@@ -26,6 +26,7 @@ const loginBody = z.object({
 const profileBody = z
   .object({
     name: z.string().trim().min(1).max(100),
+    available: z.boolean(),
   })
   .partial();
 
@@ -66,6 +67,9 @@ export async function authRoutes(app: FastifyInstance) {
   app.patch('/auth/me', { preHandler: app.authenticate }, async (request) => {
     const user = currentUser(request);
     const body = parse(profileBody, request.body);
+    if (body.available !== undefined && !isStaff(user)) {
+      throw badRequest('Only agents have an availability setting');
+    }
     const updated = await updateUser(app.db, user, user.id, body);
     return toUserDto(updated);
   });

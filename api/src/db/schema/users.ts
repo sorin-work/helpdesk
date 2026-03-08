@@ -11,6 +11,8 @@ export const users = pgTable(
     passwordHash: text('password_hash').notNull(),
     role: roleEnum('role').notNull().default('customer'),
     active: boolean('active').notNull().default(true),
+    // Agents can step away from the round-robin without being deactivated.
+    available: boolean('available').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

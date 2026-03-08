@@ -103,6 +103,7 @@ export interface UpdateUserInput {
   name?: string;
   role?: Role;
   active?: boolean;
+  available?: boolean;
 }
 
 export async function updateUser(
@@ -124,6 +125,7 @@ export async function updateUser(
       ...(input.name !== undefined && { name: input.name.trim() }),
       ...(input.role !== undefined && { role: input.role }),
       ...(input.active !== undefined && { active: input.active }),
+      ...(input.available !== undefined && { available: input.available }),
       updatedAt: new Date(),
     })
     .where(eq(users.id, target.id))

@@ -30,7 +30,7 @@ describe('user management', () => {
       role: 'agent',
     });
     expect(res.statusCode).toBe(201);
-    expect(res.json()).toMatchObject({ role: 'agent', active: true });
+    expect(res.json()).toMatchObject({ role: 'agent', active: true, available: true });
 
     const login = await ctx.app.inject({
       method: 'POST',

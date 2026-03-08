@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "available" boolean DEFAULT true NOT NULL;

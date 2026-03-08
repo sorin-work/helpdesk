@@ -150,6 +150,17 @@ describe('profile', () => {
     expect(res.json().name).toBe('New Name');
   });
 
+  it('lets agents toggle their availability but not customers', async () => {
+    const agent = await createSignedInUser(ctx, 'agent');
+    const customer = await createSignedInUser(ctx, 'customer');
+    expect(
+      (await as(ctx, agent).patch('/api/auth/me', { available: false })).json().available,
+    ).toBe(false);
+    expect((await as(ctx, customer).patch('/api/auth/me', { available: false })).statusCode).toBe(
+      400,
+    );
+  });
+
   it('changes the password after checking the current one', async () => {
     const user = await createSignedInUser(ctx, 'customer');
     const wrong = await as(ctx, user).post('/api/auth/password', {

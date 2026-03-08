@@ -27,6 +27,7 @@ const updateBody = z
     name: z.string().trim().min(1).max(100),
     role: z.enum(ROLES),
     active: z.boolean(),
+    available: z.boolean(),
   })
   .partial();
 
