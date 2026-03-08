@@ -67,6 +67,15 @@ describe('user management', () => {
     expect(everyone).toHaveLength(2);
   });
 
+  it('stops admins from locking themselves out', async () => {
+    expect(
+      (await as(ctx, admin).patch(`/api/users/${admin.id}`, { role: 'agent' })).statusCode,
+    ).toBe(400);
+    expect(
+      (await as(ctx, admin).patch(`/api/users/${admin.id}`, { active: false })).statusCode,
+    ).toBe(400);
+  });
+
   it('is admin only', async () => {
     expect((await as(ctx, agent).get('/api/users')).statusCode).toBe(403);
     expect(
@@ -85,5 +94,9 @@ describe('user management', () => {
     await createSignedInUser(ctx, 'customer', 'Casey Morgan');
     const res = (await as(ctx, agent).get('/api/agents')).json().items;
     expect(res.map((u: { name: string }) => u.name)).toEqual(['Alex Rivera', 'Dana Admin']);
+  });
+
+  it('returns 404 for unknown users', async () => {
+    expect((await as(ctx, admin).patch('/api/users/999', { name: 'Ghost' })).statusCode).toBe(404);
   });
 });
