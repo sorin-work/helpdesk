@@ -3,6 +3,11 @@ import { z } from 'zod';
 import { TICKET_PRIORITIES } from '../../db/schema/index.js';
 import { parse } from '../../lib/validation.js';
 import {
+  assignmentSettingsSchema,
+  getAssignmentSettings,
+  saveAssignmentSettings,
+} from '../assignment/service.js';
+import {
   getPolicies,
   getSchedule,
   policySchema,
@@ -37,5 +42,12 @@ export async function settingsRoutes(app: FastifyInstance) {
     const policies = parse(policiesBody, request.body);
     await savePolicies(app.db, policies);
     return getPolicies(app.db);
+  });
+
+  app.get('/settings/assignment', staffOnly, async () => getAssignmentSettings(app.db));
+
+  app.put('/settings/assignment', adminOnly, async (request) => {
+    const input = parse(assignmentSettingsSchema, request.body);
+    return saveAssignmentSettings(app.db, input);
   });
 }

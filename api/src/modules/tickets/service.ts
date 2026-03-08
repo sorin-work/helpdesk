@@ -15,6 +15,7 @@ import {
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { canTransition, UNSOLVED_STATUSES } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
+import { pickNextAgent } from '../assignment/service.js';
 import { attachmentsForMessages, linkAttachments } from '../attachments/service.js';
 import { getPolicy, getSchedule } from '../sla/service.js';
 import { setTicketTags, tagsForTickets } from '../tags/service.js';
@@ -258,6 +259,20 @@ export async function createTicket(
     if (input.tags.length && isStaff(actor)) {
       const result = await setTicketTags(tx, ticket!.id, input.tags);
       await recordEvent(tx, ticket!.id, actor.id, 'tags_changed', result, now);
+    }
+
+    const agent = await pickNextAgent(tx);
+    if (agent) {
+      await tx.update(tickets).set({ assigneeId: agent.id }).where(eq(tickets.id, ticket!.id));
+      await recordEvent(
+        tx,
+        ticket!.id,
+        null,
+        'assigned',
+        { from: null, to: { id: agent.id, name: agent.name }, auto: true },
+        now,
+      );
+      return { ...ticket!, assigneeId: agent.id };
     }
     return ticket!;
   });
