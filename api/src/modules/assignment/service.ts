@@ -55,7 +55,7 @@ export async function pickNextAgent(tx: DbOrTx): Promise<User | null> {
   const stored = await readStored(tx, true);
   if (!stored.autoAssign) return null;
 
-  const eligible = and(eq(users.role, 'agent'), eq(users.available, true));
+  const eligible = and(eq(users.role, 'agent'), eq(users.active, true), eq(users.available, true));
   const after = stored.lastAgentId ?? 0;
   let [next] = await tx
     .select()

@@ -46,15 +46,16 @@ describe('round-robin auto-assign', () => {
     expect(await assignees(5)).toEqual(['Alex', 'Priya', 'Tom', 'Alex', 'Priya']);
   });
 
-  it('skips agents who are away', async () => {
+  it('skips agents who are away or deactivated', async () => {
     const alex = await createSignedInUser(ctx, 'agent', 'Alex');
+    const priya = await createSignedInUser(ctx, 'agent', 'Priya');
     await createSignedInUser(ctx, 'agent', 'Tom');
     await as(ctx, admin).put('/api/settings/assignment', { autoAssign: true });
 
-    await createSignedInUser(ctx, 'agent', 'Priya');
     await as(ctx, alex).patch('/api/auth/me', { available: false });
+    await as(ctx, admin).patch(`/api/users/${priya.id}`, { active: false });
 
-    expect(await assignees(2)).toEqual(['Priya', 'Tom']);
+    expect(await assignees(2)).toEqual(['Tom', 'Tom']);
   });
 
   it('leaves tickets unassigned when nobody is available', async () => {
