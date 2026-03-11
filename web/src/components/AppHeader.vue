@@ -23,6 +23,7 @@ async function logout() {
       <RouterLink to="/canned-responses">Canned responses</RouterLink>
       <template v-if="auth.isAdmin">
         <RouterLink to="/admin/users">People</RouterLink>
+        <RouterLink to="/admin/settings">Settings</RouterLink>
       </template>
     </nav>
     <nav v-else class="nav">

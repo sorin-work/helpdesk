@@ -96,6 +96,22 @@ export interface TagCount {
   open: number;
 }
 
+export type Weekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+
+export interface BusinessSchedule {
+  timezone: string;
+  days: Record<Weekday, { start: string; end: string } | null>;
+  holidays: string[];
+}
+
+export interface SlaPolicy {
+  firstResponseMinutes: number;
+  resolutionMinutes: number;
+  businessHours: boolean;
+}
+
+export type SlaPolicies = Record<TicketPriority, SlaPolicy>;
+
 export interface ReplyPayload {
   body: string;
   internal: boolean;
