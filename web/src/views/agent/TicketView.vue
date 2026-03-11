@@ -183,7 +183,7 @@ const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
                 >
                   <option value="">Unassigned</option>
                   <option v-for="a in agents" :key="a.id" :value="a.id">
-                    {{ a.name }}
+                    {{ a.name }}{{ a.available ? '' : ' (away)' }}
                   </option>
                 </select>
               </div>
