@@ -32,6 +32,12 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('../views/SignupView.vue'),
     meta: { guest: true, title: 'Create an account' },
   },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('../views/ProfileView.vue'),
+    meta: { title: 'Your profile' },
+  },
 
   // Customer portal
   {

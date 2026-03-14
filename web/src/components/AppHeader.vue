@@ -32,7 +32,9 @@ async function logout() {
     </nav>
 
     <div class="user">
-      <span class="avatar" :title="auth.user?.name">{{ initials(auth.user?.name ?? '') }}</span>
+      <RouterLink to="/profile" class="avatar" :title="auth.user?.name">
+        {{ initials(auth.user?.name ?? '') }}
+      </RouterLink>
       <button type="button" class="btn btn-small" @click="logout">Sign out</button>
     </div>
   </header>
