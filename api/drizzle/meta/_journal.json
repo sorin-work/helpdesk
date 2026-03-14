@@ -50,6 +50,13 @@
       "when": 1772980200000,
       "tag": "0006_agent_availability",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773489300000,
+      "tag": "0007_full_text_search",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { ticketPriorityEnum, ticketStatusEnum } from './enums.js';
+import { tsvector } from './types.js';
 import { users } from './users.js';
 
 export const tickets = pgTable(
@@ -21,8 +23,14 @@ export const tickets = pgTable(
     closedAt: timestamp('closed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    search: tsvector('search').generatedAlwaysAs(
+      sql`to_tsvector('english', coalesce(subject, ''))`,
+    ),
   },
-  (table) => [index('tickets_requester_idx').on(table.requesterId)],
+  (table) => [
+    index('tickets_requester_idx').on(table.requesterId),
+    index('tickets_search_idx').using('gin', table.search),
+  ],
 );
 
 export type Ticket = typeof tickets.$inferSelect;
