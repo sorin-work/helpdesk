@@ -39,6 +39,7 @@ const days = ref<Record<Weekday, DayRow>>(
   ) as Record<Weekday, DayRow>,
 );
 const holidays = ref<string[]>([]);
+const newHoliday = ref('');
 const scheduleError = ref('');
 
 /** SLA targets are edited in hours; the API stores minutes. */
@@ -82,6 +83,13 @@ onMounted(async () => {
   fromPolicies(sla);
   autoAssign.value = assignment.autoAssign;
 });
+
+function addHoliday() {
+  if (newHoliday.value && !holidays.value.includes(newHoliday.value)) {
+    holidays.value = [...holidays.value, newHoliday.value].sort();
+  }
+  newHoliday.value = '';
+}
 
 function describe(err: unknown): string {
   if (err instanceof ApiError && err.details.length) {
@@ -194,6 +202,28 @@ async function saveAssignment() {
           </tbody>
         </table>
 
+        <div class="field">
+          <label for="holiday">Holidays</label>
+          <div class="row">
+            <input id="holiday" v-model="newHoliday" type="date" class="inline" />
+            <button type="button" class="btn btn-small" @click="addHoliday">Add</button>
+          </div>
+          <div class="row holidays">
+            <span v-for="h in holidays" :key="h" class="tag">
+              {{ h }}
+              <button
+                type="button"
+                class="btn-link"
+                :aria-label="`Remove ${h}`"
+                @click="holidays = holidays.filter((x) => x !== h)"
+              >
+                ×
+              </button>
+            </span>
+            <span v-if="holidays.length === 0" class="faint">No holidays.</span>
+          </div>
+        </div>
+
         <div class="field row">
           <span class="spacer" />
           <button type="submit" class="btn btn-primary">Save business hours</button>
@@ -287,5 +317,9 @@ async function saveAssignment() {
 
 .days td:first-child {
   width: 160px;
+}
+
+.holidays {
+  margin-top: 8px;
 }
 </style>
