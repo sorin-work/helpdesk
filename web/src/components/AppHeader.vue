@@ -1,10 +1,18 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { initials } from '../utils/format';
 
 const auth = useAuthStore();
 const router = useRouter();
+const query = ref('');
+
+function search() {
+  const q = query.value.trim();
+  if (q) router.push({ name: 'search', query: { q } });
+}
+
 async function logout() {
   await auth.logout();
   router.push('/login');
@@ -30,6 +38,15 @@ async function logout() {
       <RouterLink to="/portal">My requests</RouterLink>
       <RouterLink to="/portal/new">New request</RouterLink>
     </nav>
+
+    <form class="search hide-mobile" role="search" @submit.prevent="search">
+      <input
+        v-model="query"
+        type="search"
+        placeholder="Search tickets"
+        aria-label="Search tickets"
+      />
+    </form>
 
     <div class="user">
       <RouterLink to="/profile" class="avatar" :title="auth.user?.name">

@@ -76,6 +76,12 @@ export const routes: RouteRecordRaw[] = [
     meta: { roles: [...staff], title: 'Ticket' },
   },
   {
+    path: '/search',
+    name: 'search',
+    component: () => import('../views/SearchView.vue'),
+    meta: { title: 'Search' },
+  },
+  {
     path: '/canned-responses',
     name: 'canned',
     component: () => import('../views/agent/CannedResponsesView.vue'),

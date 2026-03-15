@@ -96,6 +96,16 @@ export interface TagCount {
   open: number;
 }
 
+export interface SearchHit {
+  id: number;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  requesterName: string;
+  updatedAt: string;
+  snippet: string | null;
+}
+
 export type Weekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
 
 export interface BusinessSchedule {
