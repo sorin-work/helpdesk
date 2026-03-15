@@ -10,10 +10,11 @@ function tsQuery(q: string): SQL {
 
 /**
  * Matches tickets whose subject or any message matches the query. Customers
- * never match on internal notes.
+ * never match on internal notes. "#1042" or "1042" also matches by number.
  */
 export function textSearchCondition(q: string, includeInternal: boolean): SQL {
   const query = tsQuery(q);
+  const number = /^#?(\d{1,9})$/.exec(q.trim());
   const messageMatch = sql`exists (
     select 1 from ${messages}
     where ${messages.ticketId} = ${tickets.id}
@@ -21,6 +22,7 @@ export function textSearchCondition(q: string, includeInternal: boolean): SQL {
       ${includeInternal ? sql`` : sql`and ${messages.internal} = false`}
   )`;
   const conditions = [sql`${tickets.search} @@ ${query}`, messageMatch];
+  if (number) conditions.push(sql`${tickets.id} = ${Number(number[1])}`);
   return sql`(${sql.join(conditions, sql` or `)})`;
 }
 
