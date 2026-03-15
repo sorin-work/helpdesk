@@ -31,8 +31,12 @@ export interface SearchHit {
   priority: string;
   requesterName: string;
   updatedAt: string;
-  /** Matching text with <mark> around the hits. */
+  /** Matching text with <mark> around the hits, HTML-escaped otherwise. */
   snippet: string | null;
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 export async function searchTickets(
@@ -47,6 +51,7 @@ export async function searchTickets(
   const conditions = [textSearchCondition(q, staff)];
   if (!staff) conditions.push(eq(tickets.requesterId, viewer.id));
 
+  // Markers are swapped for <mark> after escaping, so message text can never inject HTML.
   const rows = await db
     .select({
       id: tickets.id,
@@ -60,7 +65,7 @@ export async function searchTickets(
         where m.ticket_id = ${tickets.id} ${visibleMessages}), 0)`.as('rank'),
       snippet: sql<string | null>`(
         select ts_headline('english', m.body, ${query},
-          'StartSel=<mark>, StopSel=</mark>, MaxFragments=2, MaxWords=18, MinWords=6')
+          'StartSel=[[[, StopSel=]]], MaxFragments=2, MaxWords=18, MinWords=6')
         from ${messages} m
         where m.ticket_id = ${tickets.id} and m.search @@ ${query} ${visibleMessages}
         order by ts_rank(m.search, ${query}) desc limit 1)`,
@@ -78,6 +83,8 @@ export async function searchTickets(
     priority: row.priority,
     requesterName: row.requesterName,
     updatedAt: row.updatedAt.toISOString(),
-    snippet: row.snippet,
+    snippet: row.snippet
+      ? escapeHtml(row.snippet).replaceAll('[[[', '<mark>').replaceAll(']]]', '</mark>')
+      : null,
   }));
 }

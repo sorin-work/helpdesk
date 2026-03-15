@@ -53,6 +53,8 @@ describe('GET /api/search', () => {
   it('searches internal notes for agents only', async () => {
     const agentHits = (await search(agent, 'provider')).json().items;
     expect(agentHits).toHaveLength(1);
+    expect(agentHits[0].snippet).toContain('&lt;img src=x');
+    expect(agentHits[0].snippet).not.toContain('<img');
     expect((await search(customer, 'provider')).json().items).toEqual([]);
   });
 
