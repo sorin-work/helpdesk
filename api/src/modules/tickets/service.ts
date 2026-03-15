@@ -17,6 +17,7 @@ import { canTransition, UNSOLVED_STATUSES } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
 import { pickNextAgent } from '../assignment/service.js';
 import { attachmentsForMessages, linkAttachments } from '../attachments/service.js';
+import { textSearchCondition } from '../search/service.js';
 import { getPolicy, getSchedule } from '../sla/service.js';
 import { setTicketTags, tagsForTickets } from '../tags/service.js';
 import { loadTicketFor } from './access.js';
@@ -70,6 +71,7 @@ export interface ListTicketsInput {
   priority?: TicketPriority;
   assigneeId?: number | 'none';
   tag?: string;
+  q?: string;
   sort: TicketSort;
   page: number;
   pageSize: number;
@@ -145,6 +147,7 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
         where ${ticketTags.ticketId} = ${tickets.id} and ${tags.name} = ${input.tag})`,
     );
   }
+  if (input.q) conditions.push(textSearchCondition(input.q, isStaff(viewer)));
 
   const where = and(...conditions);
   const [rows, [total]] = await Promise.all([

@@ -65,4 +65,9 @@ describe('GET /api/search', () => {
       (await search(agent, 'refund')).json().items.map((t: { subject: string }) => t.subject),
     ).toEqual(['Refund please', 'Charged twice for March']);
   });
+
+  it('also filters the ticket list', async () => {
+    const res = (await as(ctx, agent).get('/api/tickets?view=all&q=calendar')).json();
+    expect(res.items.map((t: { subject: string }) => t.subject)).toEqual(['Calendar sync stopped']);
+  });
 });

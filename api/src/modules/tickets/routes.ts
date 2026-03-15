@@ -28,6 +28,7 @@ const listQuery = z.object({
   priority: z.enum(TICKET_PRIORITIES).optional(),
   assignee: z.union([z.literal('none'), z.coerce.number().int().positive()]).optional(),
   tag: z.string().trim().toLowerCase().max(40).optional(),
+  q: z.string().trim().max(200).optional(),
   sort: z.enum(SORTS).default('updated'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
