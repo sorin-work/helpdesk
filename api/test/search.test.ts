@@ -66,6 +66,12 @@ describe('GET /api/search', () => {
     ).toEqual(['Refund please', 'Charged twice for March']);
   });
 
+  it('supports phrases and exclusions', async () => {
+    expect((await search(agent, '"calendar sync"')).json().items).toHaveLength(1);
+    const hits = (await search(agent, 'refund -twice')).json().items;
+    expect(hits.map((t: { subject: string }) => t.subject)).toEqual(['Refund please']);
+  });
+
   it('matches ticket numbers', async () => {
     const hits = (await search(agent, '#1002')).json().items;
     expect(hits.map((t: { id: number }) => t.id)).toEqual([1002]);
@@ -74,5 +80,9 @@ describe('GET /api/search', () => {
   it('also filters the ticket list', async () => {
     const res = (await as(ctx, agent).get('/api/tickets?view=all&q=calendar')).json();
     expect(res.items.map((t: { subject: string }) => t.subject)).toEqual(['Calendar sync stopped']);
+  });
+
+  it('needs a query', async () => {
+    expect((await search(agent, '  ')).statusCode).toBe(400);
   });
 });
