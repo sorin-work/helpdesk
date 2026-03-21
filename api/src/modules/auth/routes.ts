@@ -41,6 +41,7 @@ export async function authRoutes(app: FastifyInstance) {
     const body = parse(signupBody, request.body);
     const user = await createUser(app.db, { ...body, role: 'customer' }, app.config.bcryptRounds);
     await startSession(app, reply, user);
+    request.log.info({ userId: user.id }, 'customer signed up');
     return reply.status(201).send(toUserDto(user));
   });
 

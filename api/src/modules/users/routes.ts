@@ -47,6 +47,7 @@ export async function userRoutes(app: FastifyInstance) {
   app.post('/users', { preHandler: app.requireRole('admin') }, async (request, reply) => {
     const body = parse(createBody, request.body);
     const user = await createUser(app.db, body, app.config.bcryptRounds);
+    request.log.info({ userId: user.id, role: user.role }, 'user created by admin');
     return reply.status(201).send(toUserDto(user));
   });
 

@@ -82,6 +82,7 @@ export async function ticketRoutes(app: FastifyInstance) {
     // Urgent is a judgement call for the team, not something customers pick.
     if (!isStaff(user) && input.priority === 'urgent') input.priority = 'high';
     const ticket = await createTicket(app.db, user, input, app.now());
+    request.log.info({ ticketId: ticket.id }, 'ticket created');
     return reply.status(201).send(await getTicketDetail(app.db, user, ticket.id, app.now()));
   });
 

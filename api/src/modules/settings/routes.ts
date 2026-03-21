@@ -32,6 +32,7 @@ export async function settingsRoutes(app: FastifyInstance) {
   app.put('/settings/business-hours', adminOnly, async (request) => {
     const schedule = parse(scheduleSchema, request.body);
     await saveSchedule(app.db, schedule);
+    request.log.info({ timezone: schedule.timezone }, 'business hours updated');
     return schedule;
   });
 

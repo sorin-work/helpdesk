@@ -52,6 +52,7 @@ export async function attachmentRoutes(app: FastifyInstance) {
         storageKey: stored.key,
       })
       .returning();
+    request.log.info({ attachmentId: attachment!.id, size: stored.size }, 'attachment uploaded');
     return reply.status(201).send(toAttachmentDto(attachment!));
   });
 
