@@ -114,4 +114,10 @@ const link = (id: number) => (auth.isStaff ? `/tickets/${id}` : `/portal/tickets
   margin: 6px 0;
   color: var(--text-muted);
 }
+
+.snippet :deep(mark) {
+  background: #fff1a8;
+  color: inherit;
+  padding: 0 1px;
+}
 </style>
