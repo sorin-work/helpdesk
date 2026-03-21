@@ -36,7 +36,10 @@ onMounted(load);
       <div class="page-header heading">
         <div>
           <h1>{{ ticket.subject }}</h1>
-          <div class="faint">#{{ ticket.id }} · opened {{ formatDateTime(ticket.createdAt) }}</div>
+          <div class="faint">
+            #{{ ticket.id }} · opened {{ formatDateTime(ticket.createdAt) }}
+            <template v-if="ticket.assignee"> · handled by {{ ticket.assignee.name }}</template>
+          </div>
         </div>
         <StatusBadge :status="ticket.status" />
       </div>
