@@ -12,8 +12,9 @@ import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { canTransition } from '../../lib/status.js';
 import { isStaff } from '../../plugins/auth.js';
 import { linkAttachments } from '../attachments/service.js';
+import { getPolicy, getSchedule } from '../sla/service.js';
 import { recordEvent } from './events.js';
-import { statusChangeFields } from './sla-fields.js';
+import { firstResponseFields, statusChangeFields } from './sla-fields.js';
 
 export interface AddMessageInput {
   body: string;
@@ -66,11 +67,12 @@ export async function addMessage(
       .returning();
     await linkAttachments(tx, author.id, input.attachmentIds, ticketId, message!.id);
 
+    const [schedule, target] = await Promise.all([getSchedule(tx), getPolicy(tx, ticket.priority)]);
     const patch: Partial<Ticket> = { updatedAt: now };
     if (!input.internal) patch.lastMessageAt = now;
 
     if (staff && !input.internal && !ticket.firstRespondedAt) {
-      patch.firstRespondedAt = now;
+      Object.assign(patch, firstResponseFields(ticket, now, target, schedule));
     }
 
     // Replying publicly to an unassigned ticket takes it.
@@ -91,7 +93,7 @@ export async function addMessage(
       if (!canTransition(ticket.status, status)) {
         throw badRequest(`A ${ticket.status} ticket cannot be moved to ${status}`);
       }
-      Object.assign(patch, statusChangeFields(ticket, status, now));
+      Object.assign(patch, statusChangeFields(ticket, status, now, target, schedule));
       await recordEvent(
         tx,
         ticketId,

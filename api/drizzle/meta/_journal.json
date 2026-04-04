@@ -57,6 +57,13 @@
       "when": 1773489300000,
       "tag": "0007_full_text_search",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775297700000,
+      "tag": "0008_response_durations",
+      "breakpoints": true
     }
   ]
 }

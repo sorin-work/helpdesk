@@ -335,7 +335,7 @@ export async function updateTicket(
       if (!canTransition(ticket.status, input.status)) {
         throw badRequest(`A ${ticket.status} ticket cannot be moved to ${input.status}`);
       }
-      Object.assign(patch, statusChangeFields(ticket, input.status, now));
+      Object.assign(patch, statusChangeFields(ticket, input.status, now, target, schedule));
       await recordEvent(
         tx,
         id,

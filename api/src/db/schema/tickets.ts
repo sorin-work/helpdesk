@@ -18,6 +18,9 @@ export const tickets = pgTable(
     firstResponseDueAt: timestamp('first_response_due_at', { withTimezone: true }),
     resolutionDueAt: timestamp('resolution_due_at', { withTimezone: true }),
     firstRespondedAt: timestamp('first_responded_at', { withTimezone: true }),
+    // Business minutes, frozen when the event happens so reports stay stable.
+    firstResponseMinutes: integer('first_response_minutes'),
+    resolutionMinutes: integer('resolution_minutes'),
     lastMessageAt: timestamp('last_message_at', { withTimezone: true }).notNull().defaultNow(),
     solvedAt: timestamp('solved_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),

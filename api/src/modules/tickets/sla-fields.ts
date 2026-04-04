@@ -1,6 +1,6 @@
 import type { Ticket, TicketStatus } from '../../db/schema/index.js';
-import { type BusinessSchedule } from '../../lib/business-hours.js';
-import { computeDueDates, type SlaTarget } from '../../lib/sla.js';
+import { businessMinutesBetween, type BusinessSchedule } from '../../lib/business-hours.js';
+import { computeDueDates, scheduleFor, type SlaTarget } from '../../lib/sla.js';
 
 type SlaPatch = Partial<
   Pick<
@@ -9,6 +9,8 @@ type SlaPatch = Partial<
     | 'firstResponseDueAt'
     | 'resolutionDueAt'
     | 'firstRespondedAt'
+    | 'firstResponseMinutes'
+    | 'resolutionMinutes'
     | 'solvedAt'
     | 'closedAt'
   >
@@ -17,10 +19,18 @@ type SlaPatch = Partial<
 type SlaTicket = Pick<Ticket, 'status' | 'createdAt'>;
 
 /** Field changes that go with a status change. */
-export function statusChangeFields(ticket: SlaTicket, to: TicketStatus, now: Date): SlaPatch {
+export function statusChangeFields(
+  ticket: SlaTicket,
+  to: TicketStatus,
+  now: Date,
+  target: SlaTarget,
+  schedule: BusinessSchedule,
+): SlaPatch {
+  const clock = scheduleFor(target, schedule);
   const patch: SlaPatch = { status: to };
   if (to === 'solved') {
     patch.solvedAt = now;
+    patch.resolutionMinutes = businessMinutesBetween(ticket.createdAt, now, clock);
   }
   if (to === 'closed') patch.closedAt = now;
   return patch;
@@ -33,4 +43,21 @@ export function dueDateFields(
   schedule: BusinessSchedule,
 ): SlaPatch {
   return computeDueDates(ticket.createdAt, target, schedule);
+}
+
+/** Fields set by the first public reply from the team. */
+export function firstResponseFields(
+  ticket: Pick<Ticket, 'createdAt'>,
+  now: Date,
+  target: SlaTarget,
+  schedule: BusinessSchedule,
+): SlaPatch {
+  return {
+    firstRespondedAt: now,
+    firstResponseMinutes: businessMinutesBetween(
+      ticket.createdAt,
+      now,
+      scheduleFor(target, schedule),
+    ),
+  };
 }
