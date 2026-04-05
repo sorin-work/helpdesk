@@ -56,6 +56,11 @@ function barHeight(value: unknown) {
         {{ i % labelEvery === 0 ? String(row[labelKey]).slice(5) : '' }}
       </span>
     </div>
+    <figcaption class="legend">
+      <span v-for="s in series" :key="s.key">
+        <i :style="{ background: s.color }" />{{ s.label }}
+      </span>
+    </figcaption>
   </figure>
 </template>
 
@@ -79,5 +84,22 @@ svg {
 .labels span {
   text-align: center;
   overflow: hidden;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: -1px;
 }
 </style>
