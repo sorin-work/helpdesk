@@ -107,9 +107,9 @@ export async function reportOverview(
       )
       select to_char(d.day, 'YYYY-MM-DD') as date,
         (select count(*) from tickets t
-          where t.created_at::date = d.day)::int as created,
+          where (t.created_at at time zone ${timezone})::date = d.day)::int as created,
         (select count(*) from tickets t
-          where t.solved_at::date = d.day)::int as solved
+          where (t.solved_at at time zone ${timezone})::date = d.day)::int as solved
       from days d
       order by d.day`,
     ),
