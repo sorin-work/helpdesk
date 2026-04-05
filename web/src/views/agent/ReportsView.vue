@@ -11,11 +11,20 @@ import {
   PRIORITY_LABELS,
 } from '../../utils/format';
 
+const PRESETS = [7, 30, 90] as const;
+
+const preset = ref<number | null>(30);
 const from = ref(isoDate(daysAgo(29)));
 const to = ref(isoDate(new Date()));
 const report = ref<ReportOverview | null>(null);
 const error = ref('');
 const loading = ref(false);
+
+function usePreset(days: number) {
+  preset.value = days;
+  from.value = isoDate(daysAgo(days - 1));
+  to.value = isoDate(new Date());
+}
 
 async function load() {
   loading.value = true;
@@ -48,9 +57,25 @@ function rateClass(rate: number | null) {
     <div class="page-header">
       <h1>Reports</h1>
       <div class="row">
-        <input v-model="from" type="date" class="inline" aria-label="From" />
+        <button
+          v-for="days in PRESETS"
+          :key="days"
+          type="button"
+          class="btn btn-small"
+          :class="{ 'btn-primary': preset === days }"
+          @click="usePreset(days)"
+        >
+          {{ days }} days
+        </button>
+        <input
+          v-model="from"
+          type="date"
+          class="inline"
+          aria-label="From"
+          @change="preset = null"
+        />
         <span class="muted">to</span>
-        <input v-model="to" type="date" class="inline" aria-label="To" />
+        <input v-model="to" type="date" class="inline" aria-label="To" @change="preset = null" />
       </div>
     </div>
 
