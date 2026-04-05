@@ -3,7 +3,13 @@ import { onMounted, ref, watch } from 'vue';
 import { api, errorMessage } from '../../api/client';
 import type { ReportOverview } from '../../api/types';
 import BarChart from '../../components/BarChart.vue';
-import { daysAgo, formatDuration, formatPercent, isoDate } from '../../utils/format';
+import {
+  daysAgo,
+  formatDuration,
+  formatPercent,
+  isoDate,
+  PRIORITY_LABELS,
+} from '../../utils/format';
 
 const from = ref(isoDate(daysAgo(29)));
 const to = ref(isoDate(new Date()));
@@ -102,6 +108,63 @@ function rateClass(rate: number | null) {
         </div>
       </div>
 
+      <div class="grid-2 tables">
+        <div class="card">
+          <div class="card-body">
+            <h2>SLA by priority</h2>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Priority</th>
+                <th class="num">Tickets</th>
+                <th class="num">First response</th>
+                <th class="num">Resolution</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in report.byPriority" :key="row.priority">
+                <td>{{ PRIORITY_LABELS[row.priority] }}</td>
+                <td class="num">{{ row.created }}</td>
+                <td class="num" :class="rateClass(row.firstResponse.rate)">
+                  {{ formatPercent(row.firstResponse.rate) }}
+                </td>
+                <td class="num" :class="rateClass(row.resolution.rate)">
+                  {{ formatPercent(row.resolution.rate) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <h2>By agent</h2>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th class="num">Assigned</th>
+                <th class="num">Solved</th>
+                <th class="num">Median first response</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in report.byAgent" :key="row.id">
+                <td>{{ row.name }}</td>
+                <td class="num">{{ row.assigned }}</td>
+                <td class="num">{{ row.solved }}</td>
+                <td class="num">{{ formatDuration(row.medianFirstResponseMinutes) }}</td>
+              </tr>
+              <tr v-if="report.byAgent.length === 0">
+                <td colspan="4" class="muted">No assigned tickets in this period.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <p class="faint footnote">
         Durations are in business hours ({{ report.range.timezone }}) unless the priority runs 24/7.
         Response times and SLA figures cover tickets created in the selected period.
@@ -137,6 +200,18 @@ function rateClass(rate: number | null) {
 .stat strong {
   font-size: 26px;
   line-height: 1.3;
+}
+
+.tables {
+  margin-top: 16px;
+}
+
+.tables .card + .card {
+  margin-top: 0;
+}
+
+.tables .card-body {
+  padding-bottom: 0;
 }
 
 .footnote {
