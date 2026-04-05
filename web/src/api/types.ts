@@ -122,6 +122,40 @@ export interface SlaPolicy {
 
 export type SlaPolicies = Record<TicketPriority, SlaPolicy>;
 
+export interface Compliance {
+  met: number;
+  breached: number;
+  rate: number | null;
+}
+
+export interface Duration {
+  count: number;
+  medianMinutes: number | null;
+  averageMinutes: number | null;
+}
+
+export interface ReportOverview {
+  range: { from: string; to: string; timezone: string };
+  totals: { created: number; solved: number; backlog: number };
+  volume: { date: string; created: number; solved: number }[];
+  firstResponse: Duration;
+  resolution: Duration;
+  sla: { firstResponse: Compliance; resolution: Compliance };
+  byPriority: {
+    priority: TicketPriority;
+    created: number;
+    firstResponse: Compliance;
+    resolution: Compliance;
+  }[];
+  byAgent: {
+    id: number;
+    name: string;
+    assigned: number;
+    solved: number;
+    medianFirstResponseMinutes: number | null;
+  }[];
+}
+
 export interface ReplyPayload {
   body: string;
   internal: boolean;

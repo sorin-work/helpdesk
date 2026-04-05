@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, formatFileSize, formatRelative, initials } from './format';
+import {
+  formatDuration,
+  formatFileSize,
+  formatPercent,
+  formatRelative,
+  initials,
+  isoDate,
+} from './format';
 
 describe('formatDuration', () => {
   it.each([
@@ -40,9 +47,18 @@ describe('small formatters', () => {
     expect(formatFileSize(5.5 * 1024 * 1024)).toBe('5.5 MB');
   });
 
+  it('formats rates as percentages', () => {
+    expect(formatPercent(0.876)).toBe('88%');
+    expect(formatPercent(null)).toBe('-');
+  });
+
   it('builds initials from up to two names', () => {
     expect(initials('Alex Rivera')).toBe('AR');
     expect(initials('maria del carmen')).toBe('MD');
     expect(initials('')).toBe('');
+  });
+
+  it('formats local dates for inputs', () => {
+    expect(isoDate(new Date(2026, 0, 5))).toBe('2026-01-05');
   });
 });

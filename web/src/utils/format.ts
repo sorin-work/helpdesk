@@ -26,6 +26,8 @@ export const SLA_LABELS: Record<SlaState, string> = {
 };
 
 const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
 
 /** "45m", "3h 20m", "2d 4h". Durations are rounded to the minute. */
 export function formatDuration(minutes: number | null | undefined): string {
@@ -66,6 +68,21 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+export function formatPercent(rate: number | null): string {
+  return rate === null ? '-' : `${Math.round(rate * 100)}%`;
+}
+
+/** Local YYYY-MM-DD for a Date, used for date inputs and report ranges. */
+export function isoDate(date: Date): string {
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
+export function daysAgo(days: number, from: Date = new Date()): Date {
+  return new Date(from.getTime() - days * DAY);
 }
 
 export function initials(name: string): string {
