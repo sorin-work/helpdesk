@@ -118,4 +118,24 @@ describe('GET /api/reports/overview', () => {
     ]);
     expect(report.totals.created).toBe(2);
   });
+
+  it('defaults to the last 30 days', async () => {
+    const report = (await as(ctx, agent).get('/api/reports/overview')).json();
+    expect(report.range).toMatchObject({ from: '2026-02-03', to: '2026-03-04' });
+    expect(report.volume).toHaveLength(30);
+  });
+
+  it('validates the range', async () => {
+    expect(
+      (await as(ctx, agent).get('/api/reports/overview?from=2026-03-05&to=2026-03-01')).statusCode,
+    ).toBe(400);
+    expect(
+      (await as(ctx, agent).get('/api/reports/overview?from=2024-01-01&to=2026-03-01')).statusCode,
+    ).toBe(400);
+    expect((await as(ctx, agent).get('/api/reports/overview?from=yesterday')).statusCode).toBe(400);
+  });
+
+  it('is for staff only', async () => {
+    expect((await as(ctx, customer).get('/api/reports/overview')).statusCode).toBe(403);
+  });
 });
