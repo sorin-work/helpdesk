@@ -70,6 +70,7 @@ describe('public replies', () => {
     await reply(agent, ticket.id, { body: 'Fixed!', status: 'solved' });
     const solved = await reply(customer, ticket.id, { body: 'It broke again.' });
     expect(solved.json().status).toBe('open');
+    expect(solved.json().solvedAt).toBeNull();
   });
 
   it('leaves new tickets new when the customer adds more detail', async () => {

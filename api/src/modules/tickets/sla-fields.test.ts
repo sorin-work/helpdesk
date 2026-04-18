@@ -85,6 +85,19 @@ describe('statusChangeFields', () => {
     expect(patch.resolutionMinutes).toBe(60);
   });
 
+  it('clears the solve time when a ticket is reopened', () => {
+    const solved = { ...open, status: 'solved' as const };
+    const patch = statusChangeFields(
+      solved,
+      'open',
+      new Date('2026-03-06T10:00:00Z'),
+      target,
+      DEFAULT_SCHEDULE,
+    );
+    expect(patch.solvedAt).toBeNull();
+    expect(patch.resolutionMinutes).toBeNull();
+  });
+
   it('stamps closedAt when closing', () => {
     const solved = { ...open, status: 'solved' as const };
     const now = new Date('2026-03-12T10:00:00Z');

@@ -64,6 +64,9 @@ export function statusChangeFields(
       0,
       businessMinutesBetween(ticket.createdAt, now, clock) - pausedMinutes,
     );
+  } else if (ticket.status === 'solved' && to === 'open') {
+    patch.solvedAt = null;
+    patch.resolutionMinutes = null;
   }
   if (to === 'closed') patch.closedAt = now;
   return patch;
