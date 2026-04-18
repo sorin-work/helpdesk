@@ -8,11 +8,55 @@ const open = {
   status: 'open' as const,
   createdAt,
   firstRespondedAt: new Date('2026-03-04T10:30:00Z'),
+  slaPausedAt: null,
+  slaPausedMinutes: 0,
 };
 
 describe('statusChangeFields', () => {
-  it('records the business minutes it took to solve', () => {
-    const ticket = open;
+  it('starts the pause when a ticket goes to pending', () => {
+    const now = new Date('2026-03-04T12:00:00Z');
+    const patch = statusChangeFields(open, 'pending', now, target, DEFAULT_SCHEDULE);
+    expect(patch).toEqual({ status: 'pending', slaPausedAt: now });
+  });
+
+  it('adds the paused business time to the resolution target on resume', () => {
+    const paused = {
+      ...open,
+      status: 'pending' as const,
+      slaPausedAt: new Date('2026-03-04T12:00:00Z'),
+    };
+    // Paused 12:00 Wed -> 11:00 Thu = 5h Wed + 2h Thu = 420 business minutes.
+    const patch = statusChangeFields(
+      paused,
+      'open',
+      new Date('2026-03-05T11:00:00Z'),
+      target,
+      DEFAULT_SCHEDULE,
+    );
+    expect(patch.slaPausedAt).toBeNull();
+    expect(patch.slaPausedMinutes).toBe(420);
+    // 480 + 420 = 900 business minutes from Wed 10:00: 7h on Wed + 8h on Thu.
+    expect(patch.resolutionDueAt?.toISOString()).toBe('2026-03-05T17:00:00.000Z');
+  });
+
+  it('keeps the clock paused when moving between paused statuses', () => {
+    const paused = {
+      ...open,
+      status: 'pending' as const,
+      slaPausedAt: new Date('2026-03-04T12:00:00Z'),
+    };
+    const patch = statusChangeFields(
+      paused,
+      'on_hold',
+      new Date('2026-03-04T13:00:00Z'),
+      target,
+      DEFAULT_SCHEDULE,
+    );
+    expect(patch).toEqual({ status: 'on_hold' });
+  });
+
+  it('records the business minutes it took to solve, minus pauses', () => {
+    const ticket = { ...open, slaPausedMinutes: 30 };
     const patch = statusChangeFields(
       ticket,
       'solved',
@@ -21,7 +65,24 @@ describe('statusChangeFields', () => {
       DEFAULT_SCHEDULE,
     );
     expect(patch.solvedAt?.toISOString()).toBe('2026-03-04T15:00:00.000Z');
-    expect(patch.resolutionMinutes).toBe(300);
+    expect(patch.resolutionMinutes).toBe(270);
+  });
+
+  it('counts the open part when solving straight from pending', () => {
+    const paused = {
+      ...open,
+      status: 'pending' as const,
+      slaPausedAt: new Date('2026-03-04T11:00:00Z'),
+    };
+    const patch = statusChangeFields(
+      paused,
+      'solved',
+      new Date('2026-03-04T15:00:00Z'),
+      target,
+      DEFAULT_SCHEDULE,
+    );
+    expect(patch.slaPausedMinutes).toBe(240);
+    expect(patch.resolutionMinutes).toBe(60);
   });
 
   it('stamps closedAt when closing', () => {

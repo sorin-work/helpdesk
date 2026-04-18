@@ -1,6 +1,11 @@
 import type { Ticket, TicketStatus } from '../../db/schema/index.js';
-import { businessMinutesBetween, type BusinessSchedule } from '../../lib/business-hours.js';
+import {
+  addBusinessMinutes,
+  businessMinutesBetween,
+  type BusinessSchedule,
+} from '../../lib/business-hours.js';
 import { computeDueDates, scheduleFor, type SlaTarget } from '../../lib/sla.js';
+import { isPausedStatus } from '../../lib/status.js';
 
 type SlaPatch = Partial<
   Pick<
@@ -11,14 +16,22 @@ type SlaPatch = Partial<
     | 'firstRespondedAt'
     | 'firstResponseMinutes'
     | 'resolutionMinutes'
+    | 'slaPausedAt'
+    | 'slaPausedMinutes'
     | 'solvedAt'
     | 'closedAt'
   >
 >;
 
-type SlaTicket = Pick<Ticket, 'status' | 'createdAt'>;
+type SlaTicket = Pick<
+  Ticket,
+  'status' | 'createdAt' | 'firstRespondedAt' | 'slaPausedAt' | 'slaPausedMinutes'
+>;
 
-/** Field changes that go with a status change. */
+/**
+ * Field changes that go with a status change: pausing and resuming the
+ * resolution clock, and freezing durations when a ticket is solved.
+ */
 export function statusChangeFields(
   ticket: SlaTicket,
   to: TicketStatus,
@@ -28,21 +41,41 @@ export function statusChangeFields(
 ): SlaPatch {
   const clock = scheduleFor(target, schedule);
   const patch: SlaPatch = { status: to };
+  let pausedMinutes = ticket.slaPausedMinutes;
+
+  const wasPaused = ticket.slaPausedAt !== null;
+  const willPause = isPausedStatus(to);
+  if (wasPaused && !willPause) {
+    pausedMinutes += businessMinutesBetween(ticket.slaPausedAt!, now, clock);
+    patch.slaPausedAt = null;
+    patch.slaPausedMinutes = pausedMinutes;
+    patch.resolutionDueAt = addBusinessMinutes(
+      ticket.createdAt,
+      target.resolutionMinutes + pausedMinutes,
+      clock,
+    );
+  } else if (!wasPaused && willPause) {
+    patch.slaPausedAt = now;
+  }
+
   if (to === 'solved') {
     patch.solvedAt = now;
-    patch.resolutionMinutes = businessMinutesBetween(ticket.createdAt, now, clock);
+    patch.resolutionMinutes = Math.max(
+      0,
+      businessMinutesBetween(ticket.createdAt, now, clock) - pausedMinutes,
+    );
   }
   if (to === 'closed') patch.closedAt = now;
   return patch;
 }
 
-/** Due dates for a (possibly changed) priority. */
+/** Due dates for a (possibly changed) priority, keeping time already paused. */
 export function dueDateFields(
-  ticket: Pick<Ticket, 'createdAt'>,
+  ticket: Pick<Ticket, 'createdAt' | 'slaPausedMinutes'>,
   target: SlaTarget,
   schedule: BusinessSchedule,
 ): SlaPatch {
-  return computeDueDates(ticket.createdAt, target, schedule);
+  return computeDueDates(ticket.createdAt, target, schedule, ticket.slaPausedMinutes);
 }
 
 /** Fields set by the first public reply from the team. */

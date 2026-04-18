@@ -21,6 +21,8 @@ export const tickets = pgTable(
     // Business minutes, frozen when the event happens so reports stay stable.
     firstResponseMinutes: integer('first_response_minutes'),
     resolutionMinutes: integer('resolution_minutes'),
+    slaPausedAt: timestamp('sla_paused_at', { withTimezone: true }),
+    slaPausedMinutes: integer('sla_paused_minutes').notNull().default(0),
     lastMessageAt: timestamp('last_message_at', { withTimezone: true }).notNull().defaultNow(),
     solvedAt: timestamp('solved_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),

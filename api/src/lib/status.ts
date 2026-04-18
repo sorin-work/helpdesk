@@ -16,10 +16,17 @@ export const TRANSITIONS: Record<TicketStatus, readonly TicketStatus[]> = {
 /** Statuses that still need work from the team. */
 export const UNSOLVED_STATUSES: readonly TicketStatus[] = ['new', 'open', 'pending', 'on_hold'];
 
+/** While waiting on the customer or a third party the resolution clock stops. */
+export const PAUSED_STATUSES: readonly TicketStatus[] = ['pending', 'on_hold'];
+
 export function canTransition(from: TicketStatus, to: TicketStatus): boolean {
   return TRANSITIONS[from].includes(to);
 }
 
 export function isUnsolved(status: TicketStatus): boolean {
   return UNSOLVED_STATUSES.includes(status);
+}
+
+export function isPausedStatus(status: TicketStatus): boolean {
+  return PAUSED_STATUSES.includes(status);
 }

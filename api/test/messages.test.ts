@@ -58,6 +58,7 @@ describe('public replies', () => {
       status: 'pending',
     });
     expect(res.json().status).toBe('pending');
+    expect(res.json().sla.resolution.state).toBe('paused');
   });
 
   it('reopens pending and solved tickets when the customer writes back', async () => {
@@ -132,5 +133,23 @@ describe('internal notes', () => {
     const ticket = await openTicket(ctx, customer);
     const res = await reply(customer, ticket.id, { body: 'Sneaky', internal: true });
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('resolution clock', () => {
+  it('pauses while pending and extends the target by the business time paused', async () => {
+    // normal: resolution in 5 business days -> due Wed 11 March 10:00.
+    const ticket = await openTicket(ctx, customer);
+    expect(ticket.sla).toMatchObject({ resolution: { dueAt: '2026-03-11T10:00:00.000Z' } });
+
+    ctx.setNow('2026-03-04T11:00:00Z');
+    await reply(agent, ticket.id, { body: 'Which browser?', status: 'pending' });
+    // Waits over a weekend: Wed 11:00 -> Mon 11:00 = 6+8+8+2 = 24 business hours.
+    ctx.setNow('2026-03-09T11:00:00Z');
+    const res = await reply(customer, ticket.id, { body: 'Firefox' });
+    expect(res.json().sla.resolution).toEqual({
+      state: 'on_track',
+      dueAt: '2026-03-16T10:00:00.000Z',
+    });
   });
 });

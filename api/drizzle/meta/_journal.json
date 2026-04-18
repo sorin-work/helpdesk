@@ -64,6 +64,13 @@
       "when": 1775297700000,
       "tag": "0008_response_durations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776508200000,
+      "tag": "0009_sla_pause",
+      "breakpoints": true
     }
   ]
 }

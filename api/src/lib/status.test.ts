@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TICKET_STATUSES } from '../db/schema/enums.js';
-import { canTransition, isUnsolved, TRANSITIONS } from './status.js';
+import { canTransition, isPausedStatus, isUnsolved, TRANSITIONS } from './status.js';
 
 describe('ticket status transitions', () => {
   it('lets new tickets move anywhere except straight to closed', () => {
@@ -31,7 +31,8 @@ describe('ticket status transitions', () => {
     for (const status of TICKET_STATUSES) expect(canTransition(status, status)).toBe(false);
   });
 
-  it('knows which statuses are unsolved', () => {
+  it('knows which statuses are unsolved and which pause the clock', () => {
     expect(TICKET_STATUSES.filter(isUnsolved)).toEqual(['new', 'open', 'pending', 'on_hold']);
+    expect(TICKET_STATUSES.filter(isPausedStatus)).toEqual(['pending', 'on_hold']);
   });
 });

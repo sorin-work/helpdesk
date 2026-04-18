@@ -10,6 +10,7 @@ const base = {
   resolutionDueAt: new Date('2026-03-05T10:00:00Z'),
   firstRespondedAt: null,
   solvedAt: null,
+  slaPausedAt: null,
 };
 
 describe('computeDueDates', () => {
@@ -22,6 +23,12 @@ describe('computeDueDates', () => {
   it('runs on the wall clock for 24/7 policies', () => {
     const due = computeDueDates(created, { ...target, businessHours: false }, DEFAULT_SCHEDULE);
     expect(due.resolutionDueAt.toISOString()).toBe('2026-03-04T18:00:00.000Z');
+  });
+
+  it('pushes the resolution target back by time spent paused', () => {
+    const due = computeDueDates(created, target, DEFAULT_SCHEDULE, 120);
+    expect(due.firstResponseDueAt.toISOString()).toBe('2026-03-04T11:00:00.000Z');
+    expect(due.resolutionDueAt.toISOString()).toBe('2026-03-05T12:00:00.000Z');
   });
 });
 
@@ -56,6 +63,22 @@ describe('slaSummary', () => {
       new Date('2026-03-04T11:31:00Z'),
     );
     expect(sla.firstResponse.state).toBe('breached');
+  });
+
+  it('shows a paused resolution clock', () => {
+    const sla = slaSummary(
+      { ...base, slaPausedAt: new Date('2026-03-04T12:00:00Z') },
+      new Date('2026-03-09T12:00:00Z'),
+    );
+    expect(sla.resolution.state).toBe('paused');
+  });
+
+  it('keeps a breach that happened before the pause', () => {
+    const sla = slaSummary(
+      { ...base, slaPausedAt: new Date('2026-03-05T11:00:00Z') },
+      new Date('2026-03-06T12:00:00Z'),
+    );
+    expect(sla.resolution.state).toBe('breached');
   });
 
   it('judges solved tickets by when they were solved', () => {

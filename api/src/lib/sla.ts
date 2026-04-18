@@ -32,11 +32,12 @@ export function computeDueDates(
   createdAt: Date,
   target: SlaTarget,
   schedule: BusinessSchedule,
+  pausedMinutes = 0,
 ): { firstResponseDueAt: Date; resolutionDueAt: Date } {
   const clock = scheduleFor(target, schedule);
   return {
     firstResponseDueAt: addBusinessMinutes(createdAt, target.firstResponseMinutes, clock),
-    resolutionDueAt: addBusinessMinutes(createdAt, target.resolutionMinutes, clock),
+    resolutionDueAt: addBusinessMinutes(createdAt, target.resolutionMinutes + pausedMinutes, clock),
   };
 }
 
@@ -45,6 +46,7 @@ interface SlaFields {
   resolutionDueAt: Date | null;
   firstRespondedAt: Date | null;
   solvedAt: Date | null;
+  slaPausedAt: Date | null;
 }
 
 function pendingState(dueAt: Date, now: Date): SlaState {
@@ -78,5 +80,8 @@ function resolutionClock(ticket: SlaFields, now: Date): SlaClock {
   if (!due) return { state: 'none', dueAt: null };
   const dueAt = due.toISOString();
   if (ticket.solvedAt) return { state: ticket.solvedAt <= due ? 'met' : 'breached', dueAt };
+  if (ticket.slaPausedAt) {
+    return { state: ticket.slaPausedAt > due ? 'breached' : 'paused', dueAt };
+  }
   return { state: pendingState(due, now), dueAt };
 }

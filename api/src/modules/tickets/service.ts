@@ -85,7 +85,7 @@ export function overdueCondition(now: Date): SQL {
     unsolved(),
     or(
       and(isNull(tickets.firstRespondedAt), lt(tickets.firstResponseDueAt, now)),
-      lt(tickets.resolutionDueAt, now),
+      and(isNull(tickets.slaPausedAt), lt(tickets.resolutionDueAt, now)),
     ),
   )!;
 }
@@ -248,7 +248,7 @@ export async function createTicket(
         createdAt: now,
         updatedAt: now,
         lastMessageAt: now,
-        ...dueDateFields({ createdAt: now }, target, schedule),
+        ...dueDateFields({ createdAt: now, slaPausedMinutes: 0 }, target, schedule),
       })
       .returning();
 
