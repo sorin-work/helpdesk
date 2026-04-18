@@ -26,6 +26,17 @@ describe('SlaBadge', () => {
     expect(wrapper.attributes('title')).toMatch(/^First response: Breached, due /);
   });
 
+  it('shows met and paused clocks without a countdown', () => {
+    expect(
+      mount(SlaBadge, { props: { clock: { state: 'met', dueAt: '2026-03-04T09:00:00Z' } } }).text(),
+    ).toBe('Met');
+    expect(
+      mount(SlaBadge, {
+        props: { clock: { state: 'paused', dueAt: '2026-03-04T09:00:00Z' } },
+      }).text(),
+    ).toBe('Paused');
+  });
+
   it('handles tickets without a target', () => {
     expect(mount(SlaBadge, { props: { clock: { state: 'none', dueAt: null } } }).text()).toBe(
       'No target',

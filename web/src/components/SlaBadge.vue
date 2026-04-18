@@ -14,7 +14,8 @@ const text = computed(() => {
   const { state, dueAt } = props.clock;
   if (!dueAt || state === 'none') return SLA_LABELS.none;
   if (state === 'breached') return 'Overdue';
-  if (state === 'met') return SLA_LABELS.met;
+  // Met and paused clocks have nothing to count down to.
+  if (state === 'met' || state === 'paused') return SLA_LABELS[state];
   return `Due ${formatRelative(dueAt, props.now)}`;
 });
 
