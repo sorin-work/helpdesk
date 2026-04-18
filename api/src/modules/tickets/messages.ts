@@ -25,7 +25,7 @@ export interface AddMessageInput {
 }
 
 /** Customer replies wake up tickets that were waiting on them or already solved. */
-const REOPEN_ON_CUSTOMER_REPLY: readonly TicketStatus[] = ['pending', 'solved'];
+const REOPEN_ON_CUSTOMER_REPLY: readonly TicketStatus[] = ['pending', 'on_hold', 'solved'];
 
 function nextStatus(ticket: Ticket, author: User, input: AddMessageInput): TicketStatus {
   if (!isStaff(author)) {
