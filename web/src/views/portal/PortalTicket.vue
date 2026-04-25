@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { api, errorMessage } from '../../api/client';
 import type { ReplyPayload, TicketDetail } from '../../api/types';
 import MessageItem from '../../components/MessageItem.vue';
 import ReplyComposer from '../../components/ReplyComposer.vue';
 import StatusBadge from '../../components/StatusBadge.vue';
+import { useToastStore } from '../../stores/toasts';
 import { formatDateTime } from '../../utils/format';
 
 const props = defineProps<{ id: number }>();
+const toasts = useToastStore();
 
 const ticket = ref<TicketDetail | null>(null);
 const error = ref('');
+
+const canSolve = computed(
+  () => ticket.value && !['solved', 'closed'].includes(ticket.value.status),
+);
 
 async function load() {
   try {
@@ -22,6 +28,15 @@ async function load() {
 
 async function send(payload: ReplyPayload) {
   ticket.value = await api.post<TicketDetail>(`/tickets/${props.id}/messages`, payload);
+}
+
+async function markSolved() {
+  try {
+    ticket.value = await api.patch<TicketDetail>(`/tickets/${props.id}`, { status: 'solved' });
+    toasts.success('Thanks! We marked your request as solved.');
+  } catch (err) {
+    toasts.error(errorMessage(err));
+  }
 }
 
 onMounted(load);
@@ -54,6 +69,10 @@ onMounted(load);
       </div>
       <template v-else>
         <ReplyComposer class="reply" :ticket-id="ticket.id" :status="ticket.status" :send="send" />
+        <div v-if="canSolve" class="row solve">
+          <span class="muted">Problem sorted?</span>
+          <button type="button" class="btn btn-small" @click="markSolved">Mark as solved</button>
+        </div>
       </template>
     </template>
   </div>
