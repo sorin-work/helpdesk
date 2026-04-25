@@ -2,6 +2,9 @@ import { buildApp, loggerOptions } from './app.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
+import { closeSolvedTickets } from './modules/tickets/service.js';
+
+const HOUR = 60 * 60_000;
 
 async function main() {
   const config = loadConfig();
@@ -11,8 +14,21 @@ async function main() {
   await runMigrations(database.db);
   app.log.info('database migrations applied');
 
+  const housekeeping = async () => {
+    try {
+      const closed = await closeSolvedTickets(database.db, config.autoCloseDays, new Date());
+      if (closed > 0) app.log.info({ closed }, 'closed tickets that stayed solved');
+    } catch (err) {
+      app.log.error({ err }, 'housekeeping failed');
+    }
+  };
+  await housekeeping();
+  const timer = setInterval(housekeeping, HOUR);
+  timer.unref();
+
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, 'shutting down');
+    clearInterval(timer);
     await app.close();
     await database.close();
     process.exit(0);

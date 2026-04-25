@@ -23,6 +23,7 @@ const envSchema = z.object({
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
+  AUTO_CLOSE_DAYS: z.coerce.number().int().min(0).default(7),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -40,6 +41,7 @@ export interface Config {
   maxUploadBytes: number;
   allowedUploadTypes: string[];
   bcryptRounds: number;
+  autoCloseDays: number;
 }
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -66,5 +68,6 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       .map((type) => type.trim())
       .filter(Boolean),
     bcryptRounds: env.BCRYPT_ROUNDS,
+    autoCloseDays: env.AUTO_CLOSE_DAYS,
   };
 }

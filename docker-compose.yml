@@ -28,6 +28,7 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      AUTO_CLOSE_DAYS: ${AUTO_CLOSE_DAYS:-7}
     volumes:
       - uploads:/app/uploads
     depends_on:

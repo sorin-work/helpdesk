@@ -307,3 +307,15 @@ describe('views', () => {
     expect(items.map((t: { subject: string }) => t.subject)).toEqual(['High', 'Normal', 'Low']);
   });
 });
+
+describe('auto close', () => {
+  it('closes tickets that stayed solved for the configured days', async () => {
+    const { closeSolvedTickets } = await import('../src/modules/tickets/service.js');
+    const ticket = await openTicket(ctx, customer);
+    await as(ctx, agent).patch(`/api/tickets/${ticket.id}`, { status: 'solved' });
+
+    expect(await closeSolvedTickets(ctx.db, 7, new Date('2026-03-10T10:00:00Z'))).toBe(0);
+    expect(await closeSolvedTickets(ctx.db, 7, new Date('2026-03-11T10:00:01Z'))).toBe(1);
+    expect((await as(ctx, agent).get(`/api/tickets/${ticket.id}`)).json().status).toBe('closed');
+  });
+});

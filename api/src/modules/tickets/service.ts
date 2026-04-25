@@ -386,3 +386,30 @@ async function findPerson(db: DbOrTx, id: number) {
     .where(eq(users.id, id));
   return user ?? null;
 }
+
+// ---------------------------------------------------------------------------
+// Housekeeping
+
+/** Closes tickets that have stayed solved for `days`. Returns how many were closed. */
+export async function closeSolvedTickets(db: Db, days: number, now: Date): Promise<number> {
+  if (days <= 0) return 0;
+  const cutoff = new Date(now.getTime() - days * 24 * 60 * 60_000);
+  return db.transaction(async (tx) => {
+    const closed = await tx
+      .update(tickets)
+      .set({ status: 'closed', closedAt: now, updatedAt: now })
+      .where(and(eq(tickets.status, 'solved'), lt(tickets.solvedAt, cutoff)))
+      .returning({ id: tickets.id });
+    for (const { id } of closed) {
+      await recordEvent(
+        tx,
+        id,
+        null,
+        'status_changed',
+        { from: 'solved', to: 'closed', auto: true },
+        now,
+      );
+    }
+    return closed.length;
+  });
+}
