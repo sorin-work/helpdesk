@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '../../db/schema/index.js';
+import { forbidden } from '../../lib/errors.js';
 import { parse } from '../../lib/validation.js';
 import { currentUser, isStaff } from '../../plugins/auth.js';
 import { loadTicketFor } from './access.js';
@@ -97,11 +98,19 @@ export async function ticketRoutes(app: FastifyInstance) {
 
   app.patch<{ Params: { id: string } }>(
     '/tickets/:id',
-    { preHandler: app.requireRole('agent', 'admin') },
+    { preHandler: app.authenticate },
     async (request) => {
       const user = currentUser(request);
       const id = parse(ticketId, request.params.id);
       const input = parse(updateBody, request.body);
+      const ticket = await loadTicketFor(app.db, user, id);
+      if (!isStaff(user)) {
+        // Customers may only mark their own ticket as solved.
+        const keys = Object.keys(input);
+        if (keys.length !== 1 || input.status !== 'solved' || ticket.status === 'closed') {
+          throw forbidden('Only agents can change tickets');
+        }
+      }
       await updateTicket(app.db, user, id, input, app.now());
       return getTicketDetail(app.db, user, id, app.now());
     },

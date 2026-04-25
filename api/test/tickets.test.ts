@@ -102,6 +102,18 @@ describe('access', () => {
     expect((await as(ctx, customer).get('/api/tickets/counts')).statusCode).toBe(403);
     expect((await as(ctx, customer).get(`/api/tickets/${ticket.id}/events`)).statusCode).toBe(403);
   });
+
+  it('only lets customers mark their own ticket as solved', async () => {
+    const ticket = await openTicket(ctx, customer);
+    const priority = await as(ctx, customer).patch(`/api/tickets/${ticket.id}`, {
+      priority: 'urgent',
+    });
+    expect(priority.statusCode).toBe(403);
+
+    const solved = await as(ctx, customer).patch(`/api/tickets/${ticket.id}`, { status: 'solved' });
+    expect(solved.statusCode).toBe(200);
+    expect(solved.json().status).toBe('solved');
+  });
 });
 
 describe('updating tickets', () => {
