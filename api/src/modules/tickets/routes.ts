@@ -44,6 +44,7 @@ const createBody = z.object({
   priority: z.enum(TICKET_PRIORITIES).default('normal'),
   attachmentIds,
   tags: z.array(z.string().max(40)).max(20).default([]),
+  requesterEmail: z.email().optional(),
 });
 
 const updateBody = z

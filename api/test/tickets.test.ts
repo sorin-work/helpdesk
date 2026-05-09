@@ -60,6 +60,31 @@ describe('creating tickets', () => {
     expect(ticket.priority).toBe('high');
   });
 
+  it('lets agents open a ticket for a customer', async () => {
+    const res = await as(ctx, agent).post('/api/tickets', {
+      subject: 'Phone call: invoice question',
+      body: 'Customer called about invoice INV-1.',
+      requesterEmail: customer.email,
+      priority: 'urgent',
+      tags: ['Phone'],
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      requester: { id: customer.id },
+      priority: 'urgent',
+      tags: ['phone'],
+    });
+  });
+
+  it('rejects an unknown requester email', async () => {
+    const res = await as(ctx, agent).post('/api/tickets', {
+      subject: 'Phone call',
+      body: 'Hello',
+      requesterEmail: 'ghost@example.com',
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('validates subject and body', async () => {
     const res = await as(ctx, customer).post('/api/tickets', { subject: 'x', body: '   ' });
     expect(res.statusCode).toBe(400);

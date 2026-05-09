@@ -229,6 +229,8 @@ export interface CreateTicketInput {
   priority: TicketPriority;
   attachmentIds: string[];
   tags: string[];
+  /** Staff can open a ticket on behalf of an existing customer. */
+  requesterEmail?: string;
 }
 
 export async function createTicket(
@@ -238,13 +240,24 @@ export async function createTicket(
   now: Date,
 ): Promise<Ticket> {
   return db.transaction(async (tx) => {
+    let requesterId = actor.id;
+    if (input.requesterEmail) {
+      if (!isStaff(actor)) throw badRequest('Only agents can open tickets for someone else');
+      const [customer] = await tx
+        .select()
+        .from(users)
+        .where(sql`lower(${users.email}) = ${input.requesterEmail.trim().toLowerCase()}`);
+      if (!customer) throw badRequest(`No customer with email ${input.requesterEmail}`);
+      requesterId = customer.id;
+    }
+
     const [schedule, target] = await Promise.all([getSchedule(tx), getPolicy(tx, input.priority)]);
     const [ticket] = await tx
       .insert(tickets)
       .values({
         subject: input.subject,
         priority: input.priority,
-        requesterId: actor.id,
+        requesterId,
         createdAt: now,
         updatedAt: now,
         lastMessageAt: now,
