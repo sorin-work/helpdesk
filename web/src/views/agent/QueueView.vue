@@ -101,6 +101,7 @@ function open(ticket: TicketSummary) {
 <template>
   <div class="queue">
     <aside class="views">
+      <RouterLink to="/tickets/new" class="btn btn-primary new">New ticket</RouterLink>
       <nav aria-label="Views">
         <RouterLink
           v-for="v in VIEWS"

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { api, ApiError, errorMessage } from '../api/client';
 import type { Attachment, TicketDetail, TicketPriority } from '../api/types';
 import FilePicker from '../components/FilePicker.vue';
+import TagInput from '../components/TagInput.vue';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toasts';
 import { PRIORITY_LABELS } from '../utils/format';
@@ -15,12 +16,16 @@ const toasts = useToastStore();
 const subject = ref('');
 const body = ref('');
 const priority = ref<TicketPriority>('normal');
+const requesterEmail = ref('');
+const tags = ref<string[]>([]);
 const files = ref<Attachment[]>([]);
 const busy = ref(false);
 const error = ref('');
 const fieldErrors = ref<Record<string, string>>({});
 
-const priorities: TicketPriority[] = ['low', 'normal', 'high'];
+const priorities: TicketPriority[] = auth.isStaff
+  ? ['low', 'normal', 'high', 'urgent']
+  : ['low', 'normal', 'high'];
 
 async function submit() {
   busy.value = true;
@@ -32,9 +37,10 @@ async function submit() {
       body: body.value,
       priority: priority.value,
       attachmentIds: files.value.map((f) => f.id),
+      ...(auth.isStaff && { requesterEmail: requesterEmail.value, tags: tags.value }),
     });
     toasts.success(`Ticket #${ticket.id} created`);
-    await router.push(`/portal/tickets/${ticket.id}`);
+    await router.push(auth.isStaff ? `/tickets/${ticket.id}` : `/portal/tickets/${ticket.id}`);
   } catch (err) {
     if (err instanceof ApiError && err.details.length) fieldErrors.value = err.fieldErrors();
     else error.value = errorMessage(err);
@@ -47,11 +53,20 @@ async function submit() {
 <template>
   <div class="page page-narrow">
     <div class="page-header">
-      <h1>How can we help?</h1>
+      <h1>{{ auth.isStaff ? 'New ticket' : 'How can we help?' }}</h1>
     </div>
     <form class="card" @submit.prevent="submit">
       <div class="card-body">
         <div v-if="error" class="alert alert-error" role="alert">{{ error }}</div>
+
+        <div v-if="auth.isStaff" class="field">
+          <label for="requester">Customer email</label>
+          <input id="requester" v-model="requesterEmail" type="email" required />
+          <div v-if="fieldErrors.requesterEmail" class="field-error">
+            {{ fieldErrors.requesterEmail }}
+          </div>
+          <div v-else class="faint">The customer needs an account already.</div>
+        </div>
 
         <div class="field">
           <label for="subject">Subject</label>
@@ -80,10 +95,14 @@ async function submit() {
 
         <div class="grid-2 field">
           <div>
-            <label for="priority">How urgent is it?</label>
+            <label for="priority">{{ auth.isStaff ? 'Priority' : 'How urgent is it?' }}</label>
             <select id="priority" v-model="priority">
               <option v-for="p in priorities" :key="p" :value="p">{{ PRIORITY_LABELS[p] }}</option>
             </select>
+          </div>
+          <div v-if="auth.isStaff">
+            <label>Tags</label>
+            <TagInput v-model="tags" />
           </div>
         </div>
 

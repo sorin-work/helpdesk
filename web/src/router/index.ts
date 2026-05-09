@@ -69,6 +69,12 @@ export const routes: RouteRecordRaw[] = [
     meta: { roles: [...staff], title: 'Tickets' },
   },
   {
+    path: '/tickets/new',
+    name: 'ticket-new',
+    component: () => import('../views/NewTicketView.vue'),
+    meta: { roles: [...staff], title: 'New ticket' },
+  },
+  {
     path: '/tickets/:id(\\d+)',
     name: 'ticket',
     component: () => import('../views/agent/TicketView.vue'),
