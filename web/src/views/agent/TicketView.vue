@@ -80,6 +80,8 @@ watch(tags, (next) => {
   if (ticket.value && next.join(',') !== ticket.value.tags.join(',')) void update({ tags: next });
 });
 
+watch(() => props.id, load);
+
 onMounted(async () => {
   await load();
   const [team, cannedList, tagList] = await Promise.all([
