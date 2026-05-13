@@ -71,6 +71,13 @@
       "when": 1776508200000,
       "tag": "0009_sla_pause",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778706900000,
+      "tag": "0010_ticket_status_index",
+      "breakpoints": true
     }
   ]
 }

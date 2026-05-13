@@ -1,0 +1,1 @@
+CREATE INDEX "tickets_status_assignee_idx" ON "tickets" USING btree ("status","assignee_id");

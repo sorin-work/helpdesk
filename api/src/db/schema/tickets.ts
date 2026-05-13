@@ -34,6 +34,7 @@ export const tickets = pgTable(
   },
   (table) => [
     index('tickets_requester_idx').on(table.requesterId),
+    index('tickets_status_assignee_idx').on(table.status, table.assigneeId),
     index('tickets_search_idx').using('gin', table.search),
   ],
 );
