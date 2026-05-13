@@ -81,6 +81,7 @@ header time {
 
 .body {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .note-badge {
