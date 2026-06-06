@@ -1,15 +1,18 @@
 # helpdesk
 
-A small help desk: customers open tickets in a portal, agents work them from
-shared queues against SLA targets that run on business hours.
+A help desk for small support teams. Customers open requests through a simple
+portal; agents work them from shared queues with SLA targets, canned responses
+and internal notes; admins set business hours, targets and the team.
 
-## Stack
+## Features
 
-| Part  | Tech                                                         |
-| ----- | ------------------------------------------------------------ |
-| API   | Node 22, TypeScript, Fastify 5, Drizzle ORM, Zod, PostgreSQL |
-| Web   | Vue 3, TypeScript, Vite, Pinia, Vue Router                   |
-| Tests | Vitest, PGlite (in-memory Postgres), Vue Test Utils          |
+- Customer portal: sign up, open requests with attachments, reply, mark as solved
+- Agent queues: assigned to me, unassigned, all open, overdue and recently solved
+- Statuses with allowed transitions, priorities and SLA targets per priority,
+  counted in business hours and paused while waiting on the customer
+- Round-robin assignment, internal notes, canned responses with placeholders,
+  tags, attachments and full-text search
+- Reports: volume, first-response and resolution times, SLA compliance
 
 ## Running with Docker
 
@@ -17,16 +20,16 @@ shared queues against SLA targets that run on business hours.
 docker compose up --build
 ```
 
-Then open http://localhost:5190 and create an account. The API is on
-http://localhost:4410 and Postgres on port 5450. Change the ports with
-`WEB_PORT`, `API_PORT` and `DB_PORT` (see `.env.example`).
+Then open http://localhost:5190. The first start creates demo data:
 
-Agents and admins are not created through sign-up yet; promote a user in the
-database for now:
+| Role     | Email                  | Password            |
+| -------- | ---------------------- | ------------------- |
+| Admin    | `demo@example.com`     | `demo-password`     |
+| Agent    | `agent@example.com`    | `agent-password`    |
+| Customer | `customer@example.com` | `customer-password` |
 
-```bash
-docker compose exec db psql -U helpdesk -c "update users set role = 'admin' where email = 'you@example.com'"
-```
+Set `SEED_DEMO=false` to start empty. Ports can be changed with `WEB_PORT`,
+`API_PORT` and `DB_PORT` (see `.env.example`).
 
 ## Running without Docker
 
@@ -38,8 +41,6 @@ npm install
 cp api/.env.example api/.env     # adjust DATABASE_URL and JWT_SECRET
 npm run dev                      # API on :4410, web app on :5190
 ```
-
-The API applies migrations when it starts.
 
 ## Tests
 
