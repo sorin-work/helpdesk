@@ -3,6 +3,7 @@ import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
 import { closeSolvedTickets } from './modules/tickets/service.js';
+import { seedDemo } from './seed/demo.js';
 
 const HOUR = 60 * 60_000;
 
@@ -13,6 +14,11 @@ async function main() {
 
   await runMigrations(database.db);
   app.log.info('database migrations applied');
+
+  if (config.seedDemo) {
+    const seeded = await seedDemo(database.db, config, app.log);
+    if (seeded) app.log.info('demo data created');
+  }
 
   const housekeeping = async () => {
     try {

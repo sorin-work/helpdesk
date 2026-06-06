@@ -29,6 +29,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
       AUTO_CLOSE_DAYS: ${AUTO_CLOSE_DAYS:-7}
+      # Creates demo@example.com / demo-password plus an agent, a customer and sample tickets.
+      SEED_DEMO: ${SEED_DEMO:-true}
     volumes:
       - uploads:/app/uploads
     depends_on:

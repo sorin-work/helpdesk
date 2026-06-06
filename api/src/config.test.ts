@@ -12,15 +12,18 @@ describe('loadConfig', () => {
     expect(config.port).toBe(4410);
     expect(config.maxUploadBytes).toBe(10 * 1024 * 1024);
     expect(config.allowedUploadTypes).toContain('application/pdf');
+    expect(config.seedDemo).toBe(false);
   });
 
   it('parses booleans and lists', () => {
     const config = loadConfig({
       ...required,
+      SEED_DEMO: 'true',
       COOKIE_SECURE: '1',
       ALLOWED_UPLOAD_TYPES: 'image/png, text/plain ,',
       MAX_UPLOAD_MB: '2.5',
     });
+    expect(config.seedDemo).toBe(true);
     expect(config.cookieSecure).toBe(true);
     expect(config.allowedUploadTypes).toEqual(['image/png', 'text/plain']);
     expect(config.maxUploadBytes).toBe(2_621_440);

@@ -24,6 +24,7 @@ const envSchema = z.object({
     ),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
   AUTO_CLOSE_DAYS: z.coerce.number().int().min(0).default(7),
+  SEED_DEMO: booleanString.default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -42,6 +43,7 @@ export interface Config {
   allowedUploadTypes: string[];
   bcryptRounds: number;
   autoCloseDays: number;
+  seedDemo: boolean;
 }
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -69,5 +71,6 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       .filter(Boolean),
     bcryptRounds: env.BCRYPT_ROUNDS,
     autoCloseDays: env.AUTO_CLOSE_DAYS,
+    seedDemo: env.SEED_DEMO,
   };
 }
