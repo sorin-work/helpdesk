@@ -32,5 +32,7 @@ WORKDIR /app/api
 USER node
 EXPOSE 4410
 VOLUME ["/app/uploads"]
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:4410/api/health > /dev/null || exit 1
 # Applies pending migrations, then starts listening.
 CMD ["node", "dist/index.js"]
