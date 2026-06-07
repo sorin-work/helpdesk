@@ -39,6 +39,7 @@ export function loggerOptions(config: Config): FastifyServerOptions['logger'] {
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: options.logger ?? false,
+    trustProxy: true,
     genReqId: (req) => (req.headers['x-request-id'] as string | undefined) ?? randomUUID(),
   });
 
