@@ -359,3 +359,17 @@ input.inline {
   padding: 48px 16px;
   color: var(--text-muted);
 }
+
+@media (max-width: 860px) {
+  .page {
+    padding: 16px;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .hide-mobile {
+    display: none;
+  }
+}
