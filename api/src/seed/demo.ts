@@ -1,6 +1,7 @@
+import { eq } from 'drizzle-orm';
 import type { Config } from '../config.js';
 import type { Db } from '../db/client.js';
-import { type TicketPriority, type User } from '../db/schema/index.js';
+import { tickets, type TicketPriority, type User } from '../db/schema/index.js';
 import { addBusinessMinutes, type BusinessSchedule } from '../lib/business-hours.js';
 import { scheduleFor } from '../lib/sla.js';
 import { saveAssignmentSettings } from '../modules/assignment/service.js';
@@ -88,6 +89,7 @@ export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise
 
   const team = [...agents, ...agents, admin];
   const limit = now.getTime() - 5 * MINUTE;
+  const escalated: { id: number; agent: User }[] = [];
 
   for (let i = 0; i < TICKETS; i++) {
     const scenario = SCENARIOS[i % SCENARIOS.length]!;
@@ -165,6 +167,7 @@ export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise
 
     // Bugs and anything escalated internally wait on someone else for a while.
     const onHold = !oldEnough && (scenario.tags.includes('bug') || Boolean(scenario.note));
+    if (onHold) escalated.push({ id: ticket.id, agent });
     await addMessage(
       db,
       agent,
@@ -221,6 +224,25 @@ export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise
       },
       closeAt,
     );
+  }
+
+  // Customers chased some escalated tickets back to open; park a few again.
+  let parked = 0;
+  for (const { id, agent } of escalated.reverse()) {
+    if (parked >= 3) break;
+    const [row] = await db
+      .select({ status: tickets.status })
+      .from(tickets)
+      .where(eq(tickets.id, id));
+    if (row?.status !== 'open') continue;
+    await updateTicket(
+      db,
+      agent,
+      id,
+      { status: 'on_hold' },
+      new Date(limit - parked * 20 * MINUTE),
+    );
+    parked++;
   }
 
   const closed = await closeSolvedTickets(db, config.autoCloseDays || 7, now);
