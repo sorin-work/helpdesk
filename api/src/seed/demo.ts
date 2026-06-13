@@ -139,7 +139,7 @@ export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise
         agent,
         ticket.id,
         { body: scenario.note, internal: true, attachmentIds: [] },
-        new Date(respondAt.getTime() - 2 * MINUTE),
+        new Date(Math.max(createdAt.getTime() + MINUTE, respondAt.getTime() - 2 * MINUTE)),
       );
     }
 
