@@ -1,10 +1,12 @@
+import { Readable } from 'node:stream';
 import { eq } from 'drizzle-orm';
 import type { Config } from '../config.js';
 import type { Db } from '../db/client.js';
-import { tickets, type TicketPriority, type User } from '../db/schema/index.js';
+import { attachments, tickets, type TicketPriority, type User } from '../db/schema/index.js';
 import { addBusinessMinutes, type BusinessSchedule } from '../lib/business-hours.js';
 import { scheduleFor } from '../lib/sla.js';
 import { saveAssignmentSettings } from '../modules/assignment/service.js';
+import { LocalStorage } from '../modules/attachments/storage.js';
 import { createCannedResponse } from '../modules/canned/service.js';
 import { DEFAULT_POLICIES, savePolicies, saveSchedule } from '../modules/sla/service.js';
 import { addMessage } from '../modules/tickets/messages.js';
@@ -60,6 +62,11 @@ function random(seed: number) {
   };
 }
 
+const SAMPLE_FILE = `2026-03-04 08:12:31 ERROR booking-widget: request failed (503)
+2026-03-04 08:12:33 ERROR booking-widget: retry 1/3 failed (503)
+2026-03-04 08:12:39 ERROR booking-widget: retry 2/3 failed (503)
+`;
+
 export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise<boolean> {
   if (await findUserByEmail(db, DEMO_ADMIN.email)) return false;
 
@@ -87,6 +94,7 @@ export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise
   await savePolicies(db, DEFAULT_POLICIES);
   for (const canned of CANNED_RESPONSES) await createCannedResponse(db, admin, canned);
 
+  const storage = new LocalStorage(config.uploadDir);
   const team = [...agents, ...agents, admin];
   const limit = now.getTime() - 5 * MINUTE;
   const escalated: { id: number; agent: User }[] = [];
@@ -106,6 +114,23 @@ export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise
     const createdAt = new Date(Math.min(limit - HOUR, now.getTime() - age));
     const at = (date: Date) => (date.getTime() < limit ? date : null);
 
+    let attachmentIds: string[] = [];
+    if (i % 11 === 3) {
+      const stored = await storage.save(Readable.from([SAMPLE_FILE]), createdAt);
+      const [file] = await db
+        .insert(attachments)
+        .values({
+          uploaderId: customer.id,
+          filename: 'error-log.txt',
+          contentType: 'text/plain',
+          size: stored.size,
+          storageKey: stored.key,
+          createdAt,
+        })
+        .returning();
+      attachmentIds = [file!.id];
+    }
+
     const ticket = await createTicket(
       db,
       customer,
@@ -113,7 +138,7 @@ export async function seedDemo(db: Db, config: Config, log: SeedLogger): Promise
         subject: scenario.subject,
         body: scenario.opening,
         priority,
-        attachmentIds: [],
+        attachmentIds,
         tags: [],
       },
       createdAt,
