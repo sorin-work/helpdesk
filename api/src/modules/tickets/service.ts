@@ -298,6 +298,7 @@ export async function createTicket(
 // Updating
 
 export interface UpdateTicketInput {
+  subject?: string;
   status?: TicketStatus;
   priority?: TicketPriority;
   assigneeId?: number | null;
@@ -329,6 +330,18 @@ export async function updateTicket(
     const patch: Partial<Ticket> = {};
     const schedule = await getSchedule(tx);
     let target = await getPolicy(tx, ticket.priority);
+
+    if (input.subject !== undefined && input.subject !== ticket.subject) {
+      patch.subject = input.subject;
+      await recordEvent(
+        tx,
+        id,
+        actor.id,
+        'subject_changed',
+        { from: ticket.subject, to: input.subject },
+        now,
+      );
+    }
 
     if (input.priority && input.priority !== ticket.priority) {
       target = await getPolicy(tx, input.priority);

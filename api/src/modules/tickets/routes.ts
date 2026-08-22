@@ -49,6 +49,7 @@ const createBody = z.object({
 
 const updateBody = z
   .object({
+    subject: z.string().trim().min(3).max(200),
     status: z.enum(TICKET_STATUSES),
     priority: z.enum(TICKET_PRIORITIES),
     assigneeId: z.number().int().positive().nullable(),

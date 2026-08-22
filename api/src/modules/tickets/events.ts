@@ -4,7 +4,12 @@ import { ticketEvents, users } from '../../db/schema/index.js';
 import { toEventDto, type EventDto } from './dto.js';
 
 export type EventType =
-  'created' | 'status_changed' | 'priority_changed' | 'assigned' | 'tags_changed';
+  | 'created'
+  | 'status_changed'
+  | 'priority_changed'
+  | 'assigned'
+  | 'tags_changed'
+  | 'subject_changed';
 
 export async function recordEvent(
   db: DbOrTx,
