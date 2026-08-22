@@ -33,6 +33,8 @@ const canned = ref<CannedResponse[]>([]);
 const tagSuggestions = ref<string[]>([]);
 const tags = ref<string[]>([]);
 const error = ref('');
+const editingSubject = ref(false);
+const subject = ref('');
 
 const closed = computed(() => ticket.value?.status === 'closed');
 
@@ -43,6 +45,7 @@ async function loadEvents() {
 function setTicket(next: TicketDetail) {
   ticket.value = next;
   tags.value = [...next.tags];
+  subject.value = next.subject;
 }
 
 async function load() {
@@ -76,6 +79,13 @@ async function send(payload: ReplyPayload) {
   toasts.success(payload.internal ? 'Note added' : 'Reply sent');
 }
 
+function saveSubject() {
+  editingSubject.value = false;
+  if (subject.value.trim() && subject.value !== ticket.value?.subject) {
+    void update({ subject: subject.value.trim() });
+  }
+}
+
 watch(tags, (next) => {
   if (ticket.value && next.join(',') !== ticket.value.tags.join(',')) void update({ tags: next });
 });
@@ -106,7 +116,20 @@ const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
       <section class="main">
         <div class="heading">
           <span class="faint">#{{ ticket.id }}</span>
-          <h1>{{ ticket.subject }}</h1>
+          <input
+            v-if="editingSubject"
+            v-model="subject"
+            class="subject-input"
+            type="text"
+            aria-label="Subject"
+            autofocus
+            @keydown.enter="saveSubject"
+            @keydown.esc="editingSubject = false"
+            @blur="saveSubject"
+          />
+          <h1 v-else :title="closed ? '' : 'Click to edit'" @click="editingSubject = !closed">
+            {{ ticket.subject }}
+          </h1>
         </div>
 
         <div class="card">
