@@ -17,12 +17,14 @@ import SlaBadge from '../../components/SlaBadge.vue';
 import StatusBadge from '../../components/StatusBadge.vue';
 import TagInput from '../../components/TagInput.vue';
 import TicketTimeline from '../../components/TicketTimeline.vue';
+import { useAuthStore } from '../../stores/auth';
 import { useCountsStore } from '../../stores/counts';
 import { useToastStore } from '../../stores/toasts';
 import { formatDateTime, PRIORITY_LABELS, STATUS_LABELS } from '../../utils/format';
 import { statusOptions } from '../../utils/status';
 
 const props = defineProps<{ id: number }>();
+const auth = useAuthStore();
 const counts = useCountsStore();
 const toasts = useToastStore();
 
@@ -211,6 +213,14 @@ const priorities: TicketPriority[] = ['low', 'normal', 'high', 'urgent'];
                     {{ a.name }}{{ a.available ? '' : ' (away)' }}
                   </option>
                 </select>
+                <button
+                  v-if="ticket.assignee?.id !== auth.user?.id && !closed"
+                  type="button"
+                  class="btn btn-small"
+                  @click="update({ assigneeId: auth.user?.id })"
+                >
+                  Take it
+                </button>
               </div>
             </div>
 
