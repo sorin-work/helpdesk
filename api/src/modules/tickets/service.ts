@@ -167,19 +167,23 @@ export async function listTickets(db: Db, viewer: User, input: ListTicketsInput,
   };
 }
 
-/** Ticket counts for the agent sidebar. */
+/** Ticket counts for the agent sidebar, one query for all views. */
 export async function viewCounts(db: Db, viewer: User, now: Date) {
-  const countWhere = async (where: SQL | undefined) => {
-    const [row] = await db.select({ value: count() }).from(tickets).where(where);
-    return row?.value ?? 0;
+  const unsolvedSql = unsolved();
+  const [row] = await db
+    .select({
+      unassigned: sql<number>`count(*) filter (where ${and(unsolvedSql, isNull(tickets.assigneeId))})`,
+      mine: sql<number>`count(*) filter (where ${and(unsolvedSql, eq(tickets.assigneeId, viewer.id))})`,
+      open: sql<number>`count(*) filter (where ${unsolvedSql})`,
+      overdue: sql<number>`count(*) filter (where ${overdueCondition(now)})`,
+    })
+    .from(tickets);
+  return {
+    unassigned: Number(row?.unassigned ?? 0),
+    mine: Number(row?.mine ?? 0),
+    open: Number(row?.open ?? 0),
+    overdue: Number(row?.overdue ?? 0),
   };
-  const [unassigned, mine, open, overdue] = await Promise.all([
-    countWhere(viewCondition('unassigned', viewer, now)),
-    countWhere(viewCondition('mine', viewer, now)),
-    countWhere(viewCondition('open', viewer, now)),
-    countWhere(viewCondition('overdue', viewer, now)),
-  ]);
-  return { unassigned, mine, open, overdue };
 }
 
 // ---------------------------------------------------------------------------
