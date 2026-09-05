@@ -62,7 +62,7 @@ export async function searchTickets(
       priority: tickets.priority,
       requesterName: users.name,
       updatedAt: tickets.updatedAt,
-      rank: sql<number>`ts_rank(${tickets.search}, ${query}) + coalesce((
+      rank: sql<number>`ts_rank(${tickets.search}, ${query}) * 2 + coalesce((
         select max(ts_rank(m.search, ${query})) from ${messages} m
         where m.ticket_id = ${tickets.id} ${visibleMessages}), 0)`.as('rank'),
       snippet: sql<string | null>`(
