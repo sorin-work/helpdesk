@@ -3,6 +3,7 @@ import {
   addBusinessMinutes,
   businessMinutesBetween,
   DEFAULT_SCHEDULE,
+  isWithinBusinessHours,
   zonedTimeToUtc,
   type BusinessSchedule,
 } from './business-hours.js';
@@ -188,5 +189,20 @@ describe('zonedTimeToUtc', () => {
     // 02:30 does not exist in New York on 8 March 2026.
     const at = zonedTimeToUtc({ year: 2026, month: 3, day: 8 }, 2 * 60 + 30, 'America/New_York');
     expect(new Date(at).toISOString()).toBe('2026-03-08T07:30:00.000Z');
+  });
+});
+
+describe('isWithinBusinessHours', () => {
+  it('is true during the working window', () => {
+    expect(isWithinBusinessHours(utc('2026-03-04T09:00:00Z'), office)).toBe(true);
+  });
+
+  it('is false at closing time and on weekends', () => {
+    expect(isWithinBusinessHours(utc('2026-03-04T17:00:00Z'), office)).toBe(false);
+    expect(isWithinBusinessHours(utc('2026-03-07T12:00:00Z'), office)).toBe(false);
+  });
+
+  it('is always true without a schedule', () => {
+    expect(isWithinBusinessHours(utc('2026-03-07T03:00:00Z'), null)).toBe(true);
   });
 });

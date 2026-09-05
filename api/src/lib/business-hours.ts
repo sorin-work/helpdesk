@@ -219,3 +219,10 @@ export function businessMinutesBetween(
   }
   return Math.round(total / MINUTE);
 }
+
+/** True when the instant falls inside a working window. */
+export function isWithinBusinessHours(instant: Date, schedule: BusinessSchedule | null): boolean {
+  if (!schedule) return true;
+  const window = windowFor(localDate(instant.getTime(), schedule.timezone), schedule);
+  return window !== null && instant.getTime() >= window[0] && instant.getTime() < window[1];
+}
