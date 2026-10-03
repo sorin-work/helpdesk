@@ -6,21 +6,50 @@ and internal notes; admins set business hours, targets and the team.
 
 ## Features
 
-- Customer portal: sign up, open requests with attachments, reply, mark as solved
-- Agent queues: assigned to me, unassigned, all open, overdue and recently solved
-- Statuses with allowed transitions, priorities and SLA targets per priority,
-  counted in business hours and paused while waiting on the customer
-- Round-robin assignment, internal notes, canned responses with placeholders,
-  tags, attachments and full-text search
-- Reports: volume, first-response and resolution times, SLA compliance
+- **Customer portal**: sign up, open requests with attachments, follow the
+  conversation, reply and mark a request as solved
+- **Agent workspace**: queues for _assigned to me_, _unassigned_, _all open_,
+  _overdue_ and _recently solved_, with live counts, filters and sorting
+- **Statuses** `new`, `open`, `pending`, `on hold`, `solved` and `closed`, with
+  only sensible transitions allowed. Customer replies reopen pending and solved
+  tickets, and solved tickets close themselves after a few days
+- **Priorities and SLAs**: first-response and resolution targets per priority,
+  counted in business hours (or 24/7 per priority), paused while a ticket waits
+  on the customer, with on track / due soon / breached indicators
+- **Business hours**: a working window per weekday, a time zone and holidays
+- **Assignment**: assign by hand, take a ticket, or turn on round-robin to
+  spread new tickets across available agents. Agents can set themselves away
+- **Replies and internal notes**: notes are only ever shown to the team
+- **Canned responses** with placeholders such as `{{customer.first_name}}` and
+  `{{ticket.id}}`
+- **Tags**, **attachments** (stored on a local volume, with size and type limits)
+  and **full-text search** across subjects, replies and notes
+- **Reports**: ticket volume, first-response and resolution times, SLA
+  compliance by priority and per-agent numbers
+- **Roles**: customer, agent and admin
+
+## Stack
+
+| Part       | Tech                                                                  |
+| ---------- | --------------------------------------------------------------------- |
+| API        | Node 22, TypeScript, Fastify 5, Drizzle ORM + drizzle-kit, Zod, pino  |
+| Database   | PostgreSQL 17 (full-text search with `tsvector` columns)              |
+| Auth       | JWT in an httpOnly cookie (`@fastify/jwt`), bcrypt password hashes    |
+| Web        | Vue 3, TypeScript, Vite, Pinia, Vue Router                            |
+| Tests      | Vitest, `fastify.inject`, PGlite (in-memory Postgres), Vue Test Utils |
+| Repo setup | npm workspaces (`api`, `web`), ESLint, Prettier                       |
 
 ## Running with Docker
+
+The quickest way to try it: Postgres, the API and the web app (served by nginx)
+in one command.
 
 ```bash
 docker compose up --build
 ```
 
-Then open http://localhost:5190. The first start creates demo data:
+Then open http://localhost:5190. The first start creates demo data with these
+logins:
 
 | Role     | Email                  | Password            |
 | -------- | ---------------------- | ------------------- |
@@ -28,26 +57,115 @@ Then open http://localhost:5190. The first start creates demo data:
 | Agent    | `agent@example.com`    | `agent-password`    |
 | Customer | `customer@example.com` | `customer-password` |
 
-Set `SEED_DEMO=false` to start empty. Ports can be changed with `WEB_PORT`,
-`API_PORT` and `DB_PORT` (see `.env.example`).
+The demo has three agents, a dozen customers and about 70 tickets from the last
+six weeks in every state, including some that missed their SLA. Set
+`SEED_DEMO=false` to start with an empty database instead.
+
+| Service | URL / port            | Notes                                  |
+| ------- | --------------------- | -------------------------------------- |
+| web     | http://localhost:5190 | nginx; proxies `/api` to the API       |
+| api     | http://localhost:4410 | Fastify; `GET /api/health` for a check |
+| db      | `localhost:5450`      | Postgres 17, user/password `helpdesk`  |
+
+Ports can be changed with `WEB_PORT`, `API_PORT` and `DB_PORT` (see
+`.env.example`), e.g. `WEB_PORT=3000 docker compose up`. The API applies
+pending migrations every time it starts. Data lives in the `db-data` volume and
+attachments in `uploads`; `docker compose down -v` removes both.
 
 ## Running without Docker
 
 You need Node 22+ and PostgreSQL 15+.
 
 ```bash
-docker compose up -d db          # or use your own Postgres
 npm install
-cp api/.env.example api/.env     # adjust DATABASE_URL and JWT_SECRET
-npm run dev                      # API on :4410, web app on :5190
+
+# Use any Postgres; this starts just the database from the compose file.
+docker compose up -d db
+
+cp api/.env.example api/.env    # then adjust DATABASE_URL and JWT_SECRET
+
+# API on :4410 and the web app on :5190 (Vite proxies /api to the API)
+npm run dev
 ```
 
-## Tests
+Open http://localhost:5190. With `SEED_DEMO=true` in `api/.env` the demo data is
+created on the first start; `npm run seed -w api` does the same on demand.
+
+## Tests and checks
 
 ```bash
-npm test
-npm run lint
-npm run typecheck
+npm test             # API and web tests
+npm run lint         # ESLint
+npm run typecheck    # tsc and vue-tsc
+npm run format:check # Prettier
 ```
 
-API tests run against PGlite, so they do not need a database server.
+API tests run against PGlite, a WASM build of Postgres, with the real migrations
+applied, so no database server is needed. Route tests go through
+`fastify.inject`. SLA and business-hours math has its own unit tests, including
+time zones and daylight saving changes.
+
+## Architecture
+
+```
+api/
+  drizzle/            SQL migrations generated by drizzle-kit
+  src/
+    db/schema/        Drizzle table definitions
+    lib/              business hours, SLA states, statuses, placeholders, errors
+    modules/<name>/   routes and service per feature (tickets, sla, reports…)
+    plugins/          auth (JWT cookie) and error handling
+    seed/             demo data
+  test/               PGlite database and app helpers, route tests
+web/
+  src/
+    api/              typed fetch client and API types
+    components/       badges, composer, tag input, chart…
+    stores/           Pinia stores (session, queue counts, toasts)
+    views/            portal/, agent/ and admin/ pages
+```
+
+- The browser only talks to the web origin; nginx (or the Vite dev server)
+  proxies `/api`, so the session cookie is first-party and `SameSite=Lax`.
+- Every request re-reads the signed-in user, so deactivating someone or changing
+  their role takes effect immediately.
+- SLA due dates are computed when a ticket is created or its priority changes,
+  and pushed back by the business time spent in `pending` or `on hold`.
+  First-response and resolution durations are stored in business minutes when
+  they happen, which keeps reports cheap and stable.
+- Attachments are uploaded first, then linked to a message when it is posted.
+  Files live under `UPLOAD_DIR/YYYY/MM/<uuid>`; the original name is only kept in
+  the database.
+- Errors always look like
+  `{ "error": { "code": "not_found", "message": "Ticket not found", "requestId": "…" } }`.
+
+## Documentation
+
+- [docs/api.md](docs/api.md): endpoints, parameters and error format
+- [docs/sla.md](docs/sla.md): how SLA targets, business hours and pauses work
+
+## Configuration
+
+The API reads environment variables (or `api/.env` in development):
+
+| Variable               | Default      | Notes                                                |
+| ---------------------- | ------------ | ---------------------------------------------------- |
+| `DATABASE_URL`         | (required)   | `postgres://user:password@host:5432/db`              |
+| `JWT_SECRET`           | (required)   | At least 16 characters; use `openssl rand -hex 32`   |
+| `PORT`                 | `4410`       |                                                      |
+| `LOG_LEVEL`            | `info`       | `debug`, `info`, `warn`, `error`, `silent`…          |
+| `SESSION_DAYS`         | `7`          | How long a login lasts                               |
+| `COOKIE_SECURE`        | `false`      | Set to `true` behind HTTPS                           |
+| `UPLOAD_DIR`           | `./uploads`  | Where attachments are stored                         |
+| `MAX_UPLOAD_MB`        | `10`         | Per file                                             |
+| `ALLOWED_UPLOAD_TYPES` | images, PDF… | Comma-separated MIME types                           |
+| `AUTO_CLOSE_DAYS`      | `7`          | Close tickets solved this long ago; `0` turns it off |
+| `BCRYPT_ROUNDS`        | `10`         | Password hashing cost                                |
+| `SEED_DEMO`            | `false`      | Create the demo data on startup                      |
+
+Business hours, SLA targets and round-robin assignment are set in the app under
+**Settings** (admins only).
+
+## License
+
+MIT
