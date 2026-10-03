@@ -166,6 +166,23 @@ The API reads environment variables (or `api/.env` in development):
 Business hours, SLA targets and round-robin assignment are set in the app under
 **Settings** (admins only).
 
+## Troubleshooting
+
+**`Invalid configuration: JWT_SECRET ...` on startup.** Copy `api/.env.example`
+to `api/.env` and set a secret of at least 16 characters.
+
+**Signed in, but every request returns 401.** Over plain HTTP the session
+cookie must not be marked secure. Keep `COOKIE_SECURE=false` unless the app is
+served over HTTPS.
+
+**`port is already allocated` from Docker.** Something else uses 5190, 4410 or 5450. Pick other ports: `WEB_PORT=5191 API_PORT=4411 DB_PORT=5451 docker compose up`.
+
+**Uploads fail with 413.** Files are limited by `MAX_UPLOAD_MB` (and nginx
+accepts at most 12 MB). Raise both if you need bigger attachments.
+
+**Start over with a clean database.** `docker compose down -v` removes the
+database and uploads volumes; the next start recreates the demo data.
+
 ## License
 
 MIT
