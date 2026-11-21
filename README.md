@@ -143,6 +143,8 @@ web/
 
 - [docs/api.md](docs/api.md): endpoints, parameters and error format
 - [docs/sla.md](docs/sla.md): how SLA targets, business hours and pauses work
+- [ROADMAP.md](ROADMAP.md): ideas for what might come next, with notes on how
+  I would build them
 
 ## Configuration
 
