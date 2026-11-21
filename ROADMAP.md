@@ -200,3 +200,463 @@ deleted tickets either, if ticket deletion is ever added.
   avoids it.
 - Tests: in `api/test/attachments.test.ts` with a temporary `UPLOAD_DIR`: an
   old unlinked file goes, a linked one and a fresh one stay.
+
+## Later
+
+### 6. Replies by email
+
+Once item 2 sends mail, customers will answer it, and today those answers
+would go nowhere. Most help desks also take new requests by email.
+
+- Poll a mailbox over IMAP (a library such as `imapflow`), configured with
+  `IMAP_URL`. Self-hosted mail servers and the big providers all offer IMAP,
+  so no hosted service is required.
+- Outgoing mail carries the ticket in a `Reply-To` plus-address
+  (`support+1042@...`) and in `Message-ID` / `References` headers. A reply is
+  matched by either, checked against the requester's address.
+- Strip quoted text above or below a marker line that item 2's templates add
+  ("Reply above this line"), and attachments become `attachments` rows.
+- Mail from an unknown address with no ticket reference opens a new ticket
+  and, if there is no such customer, creates one without a password (they can
+  use item 3 to set one).
+- Tricky: auto-replies and loops. Drop mail with `Auto-Submitted` other than
+  `no`, with `Precedence: bulk`, or from our own address.
+- Tricky: spoofing. A `From` header proves nothing; requiring the plus address
+  to match the ticket's requester is a minimum. Say so in the docs.
+- Tests: the parsing and quote stripping in `api/src/lib` with sample mails;
+  a service test that feeds a parsed mail and checks the new message.
+
+### 7. Warnings before an SLA breach
+
+The overdue queue shows breached tickets, and `SlaBadge` shows "due soon", but
+only to someone looking. Teams usually want a heads-up before a target is
+missed.
+
+- In the housekeeping loop, find tickets whose first-response or resolution
+  target falls within a set window (say 30 minutes, per priority in the SLA
+  settings) and that were not warned yet, and send a mail through item 2 to the
+  assignee, or to all available agents when unassigned.
+- A `sla_warned_at` pair of columns (one per target) so each warning goes once;
+  a priority change that moves the target clears them.
+- Tricky: paused tickets have no running resolution clock (`slaPausedAt`); do
+  not warn about them.
+- Tests: a service test with a fixed `now` for a ticket inside, outside and
+  already warned.
+
+### 8. CC and followers
+
+Requests often involve more than one person on the customer side, and an agent
+may want to follow a colleague's ticket. A ticket has exactly one requester and
+one assignee.
+
+- A `ticket_followers` table (ticket, user, kind `cc` or `follower`). CCs are
+  customers who see the ticket in their portal and get public replies by mail;
+  followers are staff who get every update.
+- The ticket view gets a field to add them; `access.ts` lets a CC see the
+  ticket like its requester, but not change its status.
+- Tricky: access checks. `api/src/modules/tickets/access.ts` and
+  `getAttachmentFor` both need the CC rule; a test per path that a customer who
+  is not CC'd still gets 404.
+- Tests: route tests for a CC reading, replying and being refused the status
+  change.
+
+### 9. Customer satisfaction rating
+
+Reports show speed and SLA compliance, but nothing about whether customers
+were happy with the answer, which is the number most small teams ask about.
+
+- When a ticket is solved, item 2's mail and the portal ask "How did we do?"
+  with good or bad and an optional comment. One rating per ticket, editable
+  until it closes.
+- The rating shows on the ticket for agents, and the reports get a
+  satisfaction share per period and per agent.
+- Tricky: reopened tickets. Keep the last rating and show that it was given
+  before a reopen.
+- Tricky: a link in an email that rates without signing in needs a signed
+  token per ticket; keep the token single-purpose (rate this ticket only).
+- Tests: service tests for one rating per ticket and the report numbers.
+
+### 10. Agents open tickets for new customers
+
+An agent can open a ticket for someone else only when that customer already
+has an account (`createTicket` answers "No customer with email ..."). A phone
+call from a new customer means asking an admin to create the account first.
+
+- With a name next to the email, `createTicket` creates the customer without a
+  usable password (a random hash) and sends item 3's "set your password" mail
+  when mail is configured.
+- `NewTicketView.vue` shows the name field when the email is not known
+  (a lookup on blur through `/users?q=` is admin-only today, so add a small
+  staff endpoint that only answers "known or not").
+- Tests: in `api/test/tickets.test.ts`, an agent creating a ticket for a new
+  address, and a customer trying the same (refused, as today).
+
+### 11. Bulk actions in the queues
+
+Cleaning up after an outage or a spam wave means opening tickets one by one.
+`QueueView.vue` has no selection.
+
+- Checkboxes on queue rows and a bar with assign, set status, set priority and
+  add tag. `PATCH /api/tickets` with ids (at most 100) and one change.
+- Each ticket goes through the same `updateTicket` path, so transitions, SLA
+  recalculation and events stay correct; tickets that refuse the change (for
+  example a closed one) are reported back, not silently skipped.
+- Tests: a route test with a mix of allowed and refused tickets.
+
+### 12. Reply drafts that survive a reload
+
+The reply in `ReplyComposer.vue` lives in component state. A reload, a closed
+tab or a sign-out after a long answer loses it.
+
+- Save the draft per ticket in `localStorage` a second after the last change,
+  restore it when the ticket opens, clear it on send. Include the internal note
+  toggle and the status picked.
+- Tricky: shared computers. Clear all drafts on sign-out, and keep them out of
+  the portal for customers unless that is wanted (a customer draft is less
+  likely to be long).
+- Undecided: server-side drafts that follow the agent to another device. I
+  would start with the browser and see if anyone asks.
+- Tests: component tests in `ReplyComposer.test.ts` for restore and clear.
+
+### 13. Warn when someone else is replying
+
+Two agents can answer the same ticket at once, and the customer gets two
+replies. Nothing in the ticket view shows that a colleague is on it.
+
+- Each open ticket view sends a heartbeat every 20 seconds to a new
+  `POST /api/tickets/:id/presence` route, with `viewing` or `typing`. The API
+  keeps them in an in-memory map with a short expiry. The ticket view polls
+  who else is there and shows "Ana is replying".
+- When sending, if a public reply arrived since the view loaded, ask before
+  posting.
+- Tricky: in memory means one process, like item 1. A table works too but
+  writes every 20 seconds per viewer; at a small team's size either is fine.
+- Tests: a route test for the presence list and expiry with a fake clock.
+
+### 14. Keyboard shortcuts for agents
+
+Agents spend the day in the queue and ticket views and do everything with the
+mouse.
+
+- `j`/`k` to move in the queue, `Enter` to open, `r` to reply, `n` for a note,
+  `Ctrl+Enter` to send, `a` to take the ticket, `?` for a list. No shortcuts
+  while typing in a field.
+- A small composable in `web/src/utils` with the key handling, tested on its
+  own.
+- Tests: unit tests for the key map and the "not while typing" rule.
+
+### 15. Merge duplicate tickets
+
+Customers often open the same request twice, or a colleague reports the same
+problem. There is no way to join them.
+
+- "Merge into ..." on the ticket view: pick the target ticket; the source's
+  messages and attachments move to the target, the source is closed with an
+  internal note and a `merged` event pointing at the target, and its portal
+  page redirects.
+- Tricky: SLA numbers. The target keeps its own; the source's frozen minutes
+  stay on the source for reports, which then count it as closed. Document it.
+- Tricky: different requesters. Allow it only for the same requester at
+  first, or add the other one as CC once item 8 exists.
+- Tests: service test for moved messages, events and the redirect.
+
+### 16. Saved views
+
+The queues are fixed (`VIEWS` in `api/src/modules/tickets/service.ts`) plus
+filters that reset on every visit. A team that works by tag or priority
+rebuilds the same filter each morning.
+
+- A `saved_views` table: name, owner (or shared with all staff), and the
+  filter as JSON with the same fields `GET /tickets` takes. They show in the
+  sidebar with live counts like the built-in ones.
+- Counts for saved views run one query each; keep the number per user small
+  (say ten) or count them on demand.
+- Tests: route tests for private and shared views and their counts.
+
+### 17. Macros: a reply and field changes in one step
+
+Canned responses fill in text. A typical "need more information" answer also
+sets the status to pending and adds a tag, which is three more clicks.
+
+- Canned responses get optional actions: status, priority, tags to add,
+  assignee (me, nobody, or a person). Applying one fills the composer and
+  queues the changes, which are applied when the reply is sent.
+- The actions validate against `canTransition` at apply time, not at save
+  time, because the ticket's status differs per use.
+- Tests: service test that a macro's changes go through `updateTicket` with
+  the reply.
+
+### 18. Groups and routing
+
+All staff share one pool, and round-robin (`pickNextAgent`) spreads across
+everyone available. A team with billing and technical people wants tickets to
+reach the right half.
+
+- `groups` and `group_members` tables; a ticket gets an optional `group_id`.
+  Queues filter by "my groups"; round-robin picks within the ticket's group.
+- Routing: the portal's new request form gets an optional topic that maps to a
+  group (set by admins).
+- Tricky: `lastAgentId` in the assignment settings is global; it becomes per
+  group.
+- Tests: assignment tests for two groups and an unavailable member.
+
+### 19. Organisations
+
+Customers are individuals. When three people from one company write in,
+nothing links them, and an agent cannot see the company's history.
+
+- `organisations` (name, email domains) and `users.organisation_id`. New
+  customers whose email domain matches join automatically.
+- The ticket view shows the organisation and its other open tickets; reports
+  get a per-organisation count.
+- Undecided: whether customers of one organisation can see each other's
+  tickets. Off by default, a per-organisation switch later.
+- Tests: domain matching in `api/src/lib`; a route test for the ticket view.
+
+### 20. Custom ticket fields
+
+Teams want a few fields of their own (order number, product, plan), and today
+those end up in the subject or the first message.
+
+- `ticket_fields` (key, label, type text / number / dropdown, required for
+  customers or not, visible to customers or not) and values in a `jsonb`
+  column on `tickets`.
+- The portal form and the ticket view render them; the queue can filter by
+  dropdown fields; the search index can include text fields.
+- Tricky: changing a dropdown's options when tickets use an old value. Keep
+  old values readable and refuse to remove an option in use, or offer to map
+  it.
+- Tests: validation of values per type in `api/src/lib`; route tests for
+  required fields from the portal.
+
+### 21. Export and erase a customer's data
+
+Customers can ask for their data or for it to be removed, and there is no tool
+for either. There is also a trap: `tickets.requester_id` and
+`messages.author_id` are `on delete cascade`, so deleting a user row by hand
+deletes all their tickets, and deleting an agent deletes every reply they ever
+wrote.
+
+- Export: an admin action that writes a JSON file with the user, their tickets,
+  messages (no internal notes) and attachments in a zip.
+- Erase: replace the name and email with a placeholder, remove the password,
+  delete their attachments, and blank the bodies of their messages, keeping
+  ticket rows so reports stay right. Agents' replies are never touched.
+- Change the two foreign keys to `on delete restrict` in a migration, so a
+  hand-run delete fails instead of losing data.
+- Tests: route tests for both actions; a test that deleting a user with
+  tickets is refused.
+
+### 22. Audit log for admin changes
+
+`ticket_events` records ticket changes. Changes to people (role, active),
+business hours, SLA targets and assignment settings leave no trace, and those
+are the ones that explain a sudden change in the numbers.
+
+- An `audit_events` table (actor, type, before and after as JSON, time),
+  written by the settings and users routes, and a read-only admin page.
+- Tests: route tests that each admin change writes one row.
+
+### 23. Security headers from nginx
+
+`web/nginx.conf` sends no security headers for the app shell. The session
+cookie is httpOnly, which keeps it from scripts, but an injected script could
+still act as the user.
+
+- `Content-Security-Policy` (`default-src 'self'`, `img-src 'self' data:`,
+  `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: same-origin`, and a `Permissions-Policy`.
+- Tricky: `add_header` in a `location` block replaces the server-level ones,
+  so the `/assets/` block needs them too (an include file).
+- Tricky: image attachments are served `inline` from `/api/attachments/:id`;
+  an `image/svg+xml` upload would be a script vector. It is not in the default
+  `ALLOWED_UPLOAD_TYPES`; keep it that way and refuse SVG explicitly in
+  `api/src/config.ts` even when listed.
+- Tests: none in the suites; `curl -I` output in the PR.
+
+### 24. Report export and backlog over time
+
+`/reports/overview` gives a snapshot for a period, with daily created and
+solved counts and the current backlog. There is no backlog trend (is it
+growing?), no per-tag numbers, and no way to take the numbers into a
+spreadsheet.
+
+- A daily backlog series: for each day, tickets created on or before it and
+  not yet solved at its end. Computable from `created_at`, `solved_at` and the
+  status events without a snapshot table.
+- Per-tag counts and times, using `ticket_tags`.
+- `GET /reports/overview.csv` with the same data, and a download button.
+- Tricky: reopened tickets make "solved at" ambiguous for the backlog; use the
+  status events, not the column.
+- Tests: in `api/test/reports.test.ts` with tickets reopened across days.
+
+### 25. Scheduled backups of the database and uploads
+
+Everything lives in two Docker volumes, `db-data` and `uploads`. The README
+explains how to remove them, not how to keep them.
+
+- A `backup` service in docker-compose that runs `pg_dump` and a tar of the
+  uploads nightly into a mounted folder, keeping the last 14.
+- A restore section in the README: stop the API, load the dump, unpack the
+  uploads, start again (migrations will find nothing to do).
+- Tricky: consistency between the two. Dump the database first; an upload
+  that arrives in between is an orphan that item 5 cleans up.
+- Tests: none in the suites; the PR shows a backup and restore by hand.
+
+### 26. Metrics for operators
+
+The API logs with pino and has `/api/health`, which is good. There is no way
+to see request rates, errors, mail backlog (item 2) or slow queries over time.
+
+- A Prometheus endpoint (`prom-client`) on a separate port that compose does
+  not publish, with request counts and durations by route, outbox size, and
+  the age of the oldest unsent mail.
+- Tests: a route test that the endpoint answers on its own port only.
+
+### 27. Browser tests for the main flows
+
+The web tests cover components and stores. The views where the app lives
+(`TicketView.vue`, `QueueView.vue`, `PortalTicket.vue`, the admin pages) have
+no tests, and nothing checks the API and web together.
+
+- A small Playwright suite in its own workspace: a customer opens a request,
+  an agent takes it and replies, the customer sees the reply and solves it; an
+  admin changes a target. Against the compose stack with the demo seed.
+- Run it in CI as a separate job after the docker build, so the main check
+  stays fast.
+- Tests: this item is the tests.
+
+### 28. Accessibility pass
+
+There is no record of an accessibility review. Badges carry colour and text,
+which is good; the queue table, the composer and the bar chart need checking.
+
+- Keyboard path through queue, ticket and reply; visible focus; a skip link.
+- Status and SLA changes announced through a live region; toasts in
+  `ToastHost.vue` as `role="status"`.
+- `BarChart.vue` gets a data table alternative.
+- axe checks in the existing component tests (`vitest-axe`).
+- Tests: the axe checks and keyboard tests for the queue.
+
+### 29. Help centre articles
+
+Many questions repeat. A small set of public articles, suggested while a
+customer types a new request, would answer some before they become tickets.
+
+- `articles` (title, body in Markdown, published flag, category) edited by
+  staff, a public list and article page in the portal, and full-text search
+  with the same `tsvector` approach as tickets.
+- On `NewTicketView.vue`, suggest up to three articles matching the subject
+  as it is typed.
+- Tricky: Markdown means HTML in the page. Render with a sanitiser and a
+  strict allow-list; the rest of the app shows bodies as plain text with
+  `white-space: pre-wrap`, which is safe by construction.
+- Tricky: public pages. The portal is behind sign-in today; articles should
+  not need it, so the router and API need a public path that leaks nothing
+  else.
+- Tests: route tests for drafts not being public; the sanitiser on known bad
+  input.
+
+## Maybe
+
+### 30. Triggers
+
+Rules such as "a new ticket with 'refund' in the subject gets the billing tag
+and high priority" or "notify the admin when an urgent ticket is created".
+
+- Conditions on events (created, reply from customer, status changed) and
+  ticket fields; actions are item 17's macro actions plus sending a mail.
+- Why maybe: rule engines grow without end, and a loop (a trigger that
+  changes a field that fires a trigger) is easy to write. If built, run each
+  trigger at most once per event and never on its own changes.
+
+### 31. Settings changes and open tickets
+
+Targets and business hours apply when a ticket is created or its priority
+changes. Raising the urgent target from one hour to four leaves open urgent
+tickets on the old target, and adding a holiday does not move due dates that
+fall on it.
+
+- An admin choice when saving: "apply to open tickets too", which recomputes
+  the due dates of unsolved tickets with the new settings, keeping the paused
+  minutes.
+- Why maybe: the current rule is simple and documented in `docs/sla.md`, and
+  recomputing quietly changes what the team was promised. Frozen reports are
+  not affected either way.
+
+### 32. Time spent per ticket
+
+Some teams bill support time or want to know where it goes.
+
+- A timer in the ticket view and a manual "add time" on each reply, stored per
+  message; totals per ticket, agent and organisation in reports.
+- Why maybe: few small teams track time, and an optional field that most
+  agents ignore makes the numbers misleading.
+
+### 33. Outgoing webhooks
+
+A way to tell other tools (chat, a status page, a script) that a ticket was
+created or solved.
+
+- Admin-defined URLs with a secret, signed JSON payloads (HMAC header), sent
+  through the same outbox and retry loop as item 2's mail.
+- Tricky: SSRF. A URL like `http://db:5432` or a cloud metadata address must
+  be refused; resolve and check the address before each send.
+- Why maybe: useful only with something on the other side, and a chat tool's
+  incoming webhook is usually the only one people set up.
+
+### 34. API tokens
+
+Scripts and other tools can only use the API with a browser cookie.
+
+- Personal tokens for staff, shown once, stored hashed, with a name, a last
+  used time and read-only or full scope, sent as `Authorization: Bearer`.
+- `authenticate` accepts either the cookie or a token; tokens skip the
+  cookie's `SameSite` protection, so they must never be accepted from a
+  browser form post (no cookie fallback, header only).
+- Why maybe: until there is an outside tool to connect, it is unused surface.
+
+### 35. Live updates instead of polling
+
+`QueueView.vue` reloads the list and the counts every 60 seconds. The ticket
+view does not refresh at all, so a customer reply shows only after a reload.
+
+- Server-sent events from the API (`/api/events`), fed by Postgres
+  `LISTEN/NOTIFY` on ticket changes, so it also works with more than one API
+  process.
+- Why maybe: polling is fine at a small team's size, and long-lived
+  connections need nginx settings (`proxy_buffering off`, timeouts). Item 13
+  would benefit, but works with polling too.
+
+### 36. Virus scan for attachments
+
+Customers send files to agents, who open them.
+
+- An optional ClamAV container and a scan before the file is accepted
+  (`clamd` over TCP); infected files are refused with a clear message.
+- Why maybe: ClamAV needs about 1 GB of memory for its signatures, more than
+  the rest of the stack together. The type allow-list already blocks
+  executables by default.
+
+### 37. Translations and other search languages
+
+The portal and the agent app are in English, and the search columns use the
+`english` text search configuration (`to_tsvector('english', ...)` in the
+tickets and messages schemas), which stems other languages badly.
+
+- Translatable strings in the web app (for example with `vue-i18n`), starting
+  with the portal, which customers see.
+- A setting for the search configuration; changing it means rebuilding the
+  generated columns, which a migration can do.
+- Why maybe: no translators yet, and a mixed-language team would want
+  per-ticket languages, which is a much bigger change.
+
+### 38. Single sign-on for agents
+
+Teams that already have an identity provider want agents to sign in with it.
+
+- OpenID Connect (self-hosted providers like Keycloak or Authentik count), for
+  staff only; customers keep passwords. On first sign-in, match by email to an
+  existing agent; never create staff accounts automatically.
+- Why maybe: a small team rarely runs an identity provider, and every
+  provider differs a little in claims and logout.
